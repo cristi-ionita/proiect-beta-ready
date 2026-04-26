@@ -28,3 +28,19 @@ export async function getMe(): Promise<MeResponse> {
   const { data } = await api.get<MeResponse>("/auth/me");
   return data;
 }
+
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const { data } = await api.post("/auth/forgot-password", { email });
+  return data;
+}
+
+export async function resetPassword(
+  token: string,
+  password: string
+): Promise<{ message: string }> {
+  const { data } = await api.post("/auth/reset-password", {
+    token,
+    password,
+  });
+  return data;
+}

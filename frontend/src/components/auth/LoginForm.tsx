@@ -11,6 +11,10 @@ type LoginFormText = {
   forgotPassword: string;
   login: string;
   toggleSecret: string;
+  username: string;
+  password: string;
+  createEmployeeAccount: string;
+  createMechanicAccount: string;
 };
 
 type LoginFormProps = {
@@ -49,7 +53,7 @@ export default function LoginForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mx-auto max-w-sm rounded-[28px] border border-white/10 bg-gradient-to-b from-white to-slate-50 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+      className="mx-auto max-w-sm rounded-[26px] border border-white/10 bg-gradient-to-b from-white to-slate-50 p-5 shadow-[0_20px_56px_rgba(0,0,0,0.24)] backdrop-blur-xl"
     >
       <div className="mb-5 flex items-center justify-end">
         <button
@@ -63,14 +67,11 @@ export default function LoginForm({
       </div>
 
       <div className="mb-3">
-        <label className="mb-2 block text-sm font-medium text-slate-700">
-          Username
-        </label>
         <input
           type="text"
           value={identifier}
           onChange={(event) => setIdentifier(event.target.value)}
-          placeholder="Username"
+          placeholder={text.username}
           autoComplete="username"
           autoCapitalize="none"
           autoCorrect="off"
@@ -80,14 +81,11 @@ export default function LoginForm({
       </div>
 
       <div className="relative mb-3">
-        <label className="mb-2 block text-sm font-medium text-slate-700">
-          Parolă
-        </label>
         <input
           type={showSecret ? "text" : "password"}
           value={secret}
           onChange={(event) => setSecret(event.target.value)}
-          placeholder="Parolă"
+          placeholder={text.password}
           autoComplete="current-password"
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 outline-none transition-all duration-200 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
         />
@@ -95,7 +93,7 @@ export default function LoginForm({
         <button
           type="button"
           onClick={toggleShowSecret}
-          className="absolute right-3 top-[42px] rounded-md p-1 text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-900 active:scale-95"
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-900 active:scale-95"
           aria-label={text.toggleSecret}
         >
           {showSecret ? (
@@ -109,7 +107,7 @@ export default function LoginForm({
       {role === "employee" ? (
         <div className="mb-4 flex items-center justify-between gap-3">
           <Link
-            href="/forgot-password"
+            href="/auth/forgot-password"
             className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
           >
             {text.forgotPassword}
@@ -119,7 +117,7 @@ export default function LoginForm({
             href="/register/employee"
             className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
           >
-            Creează cont angajat
+            {text.createEmployeeAccount}
           </Link>
         </div>
       ) : null}
@@ -130,7 +128,7 @@ export default function LoginForm({
             href="/register/mechanic"
             className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
           >
-            Creează cont mecanic
+            {text.createMechanicAccount}
           </Link>
         </div>
       ) : null}

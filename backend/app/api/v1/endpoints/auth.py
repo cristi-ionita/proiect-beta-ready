@@ -18,6 +18,11 @@ from app.core.security import create_access_token, get_password_hash, verify_pas
 from app.db.models.registration_request import RegistrationRequest
 from app.db.models.user import User
 from app.db.session import get_db
+from app.schemas.auth import (
+    ForgotPasswordRequestSchema,
+    PasswordResetResponseSchema,
+    ResetPasswordRequestSchema,
+)
 from app.schemas.registration_request import (
     RegistrationRequestCreateSchema,
     RegistrationRequestReadSchema,
@@ -34,13 +39,24 @@ from app.schemas.user import (
     UserStatus,
     UserUpdateMeSchema,
 )
-from app.services.email_service import send_email_verification_email
+from app.services.email_service import (
+    send_email_verification_email,
+    send_password_reset_email,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _raise_conflict(detail: str) -> None:
     raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+
+def _hash_reset_token(token: str) -> str:
+    return get_password_hash(token)
+
+
+def _verify_reset_token(token: str, token_hash: str) -> bool:
+    return verify_password(token, token_hash)
 
 
 @router.post(
@@ -234,6 +250,95 @@ async def verify_email(
     return VerifyEmailResponseSchema(
         success=True,
         message="Email verified successfully",
+    )
+
+
+@router.post("/forgot-password", response_model=PasswordResetResponseSchema)
+async def forgot_password(
+    payload: ForgotPasswordRequestSchema,
+    db: AsyncSession = Depends(get_db),
+) -> PasswordResetResponseSchema:
+    generic_message = (
+        "If an account exists for this email, a password reset email has been sent."
+    )
+
+    user = (
+        await db.execute(select(User).where(User.email == payload.email))
+    ).scalar_one_or_none()
+
+    if user is None or not user.is_active:
+        return PasswordResetResponseSchema(message=generic_message)
+
+    reset_token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+
+    user.password_reset_token_hash = _hash_reset_token(reset_token)
+    user.password_reset_expires_at = now + timedelta(hours=1)
+
+    db.add(user)
+    await db.commit()
+
+    if user.email:
+        send_password_reset_email(
+            to_email=user.email,
+            reset_token=reset_token,
+        )
+
+    return PasswordResetResponseSchema(message=generic_message)
+
+
+@router.post("/reset-password", response_model=PasswordResetResponseSchema)
+async def reset_password(
+    payload: ResetPasswordRequestSchema,
+    db: AsyncSession = Depends(get_db),
+) -> PasswordResetResponseSchema:
+    now = datetime.now(timezone.utc)
+
+    users = (
+        await db.execute(
+            select(User).where(User.password_reset_token_hash.is_not(None))
+        )
+    ).scalars().all()
+
+    matched_user: User | None = None
+
+    for user in users:
+        if not user.password_reset_token_hash:
+            continue
+
+        if _verify_reset_token(payload.token, user.password_reset_token_hash):
+            matched_user = user
+            break
+
+    if matched_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token.",
+        )
+
+    if (
+        matched_user.password_reset_expires_at is None
+        or matched_user.password_reset_expires_at < now
+    ):
+        matched_user.password_reset_token_hash = None
+        matched_user.password_reset_expires_at = None
+        db.add(matched_user)
+        await db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token.",
+        )
+
+    matched_user.password_hash = get_password_hash(payload.password)
+    matched_user.password_reset_token_hash = None
+    matched_user.password_reset_expires_at = None
+
+    db.add(matched_user)
+    await db.commit()
+
+    return PasswordResetResponseSchema(
+        message="Password has been reset successfully.",
     )
 
 
