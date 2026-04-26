@@ -72,7 +72,7 @@ export function useAdminUsersData(): UseAdminUsersDataResult {
       leaveRes.status === "rejected" &&
       assignmentsRes.status === "rejected"
     ) {
-      setError("Failed to load users data.");
+      setError("Nu s-au putut încărca datele utilizatorilor.");
     }
 
     setLoading(false);
