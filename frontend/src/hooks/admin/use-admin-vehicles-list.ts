@@ -1,0 +1,1 @@
+export { useAdminVehiclesList } from "@/hooks/vehicles/use-admin-vehicles-list";

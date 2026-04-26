@@ -1,0 +1,1 @@
+export { useAdminIssues } from "@/hooks/issues/use-admin-issues";
