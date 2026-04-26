@@ -8,7 +8,7 @@ import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import SectionCard from "@/components/ui/section-card";
 
-import { useAdminVehiclesList } from "@/hooks/vehicles/use-admin-vehicles-list";
+import { useAdminVehiclesList } from "@/hooks/admin/use-admin-vehicles-list";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
 
 import { cn } from "@/lib/utils";
