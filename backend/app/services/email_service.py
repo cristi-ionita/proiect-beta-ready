@@ -91,7 +91,7 @@ def send_password_reset_email(*, to_email: str, reset_token: str) -> None:
     if not settings.email_enabled:
         return
 
-    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+    reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={reset_token}"
 
     subject = "Resetare parolă"
 
