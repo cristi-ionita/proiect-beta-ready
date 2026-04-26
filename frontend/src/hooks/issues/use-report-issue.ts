@@ -6,14 +6,14 @@ import { isApiClientError } from "@/lib/api-error";
 import { createMyIssue } from "@/services/issues.api";
 import type {
   CreateIssuePayload,
-  CreateIssueResponse,
+  IssueItem,
 } from "@/types/issue.types";
 
 type UseReportIssueResult = {
   loading: boolean;
   error: string;
   success: string;
-  submit: (payload: CreateIssuePayload) => Promise<CreateIssueResponse | null>;
+  submit: (payload: CreateIssuePayload) => Promise<IssueItem | null>;
 };
 
 export function useReportIssue(): UseReportIssueResult {
@@ -23,7 +23,7 @@ export function useReportIssue(): UseReportIssueResult {
 
   async function submit(
     payload: CreateIssuePayload
-  ): Promise<CreateIssueResponse | null> {
+  ): Promise<IssueItem | null> {
     try {
       setLoading(true);
       setError("");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -27,11 +27,14 @@ type ResendVerificationResponse = {
   message: string;
 };
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const token = useMemo(() => searchParams.get("token")?.trim() || "", [searchParams]);
+  const token = useMemo(
+    () => searchParams.get("token")?.trim() || "",
+    [searchParams]
+  );
 
   const [status, setStatus] = useState<VerifyStatus>("loading");
   const [message, setMessage] = useState("Se verifică adresa de email...");
@@ -86,9 +89,7 @@ export default function VerifyEmailPage() {
 
       const { data } = await api.post<ResendVerificationResponse>(
         "/auth/resend-verification-email",
-        {
-          email: normalizedEmail,
-        }
+        { email: normalizedEmail }
       );
 
       setResendMessage(
@@ -131,10 +132,7 @@ export default function VerifyEmailPage() {
             </p>
 
             <div className="mt-6">
-              <Button
-                onClick={() => router.push("/")}
-                className="rounded-2xl"
-              >
+              <Button onClick={() => router.push("/")} className="rounded-2xl">
                 Mergi la login
               </Button>
             </div>
@@ -221,5 +219,27 @@ export default function VerifyEmailPage() {
         ) : null}
       </div>
     </AuthPageShell>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthPageShell
+          icon={<MailCheck className="h-7 w-7" />}
+          title="Verificare email"
+        >
+          <div className="mx-auto max-w-md rounded-[28px] border border-white/10 bg-gradient-to-b from-white to-slate-50 p-6 text-center shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+            <Loader2 className="mx-auto h-10 w-10 animate-spin text-slate-500" />
+            <p className="mt-4 text-sm font-semibold text-slate-700">
+              Se verifică adresa de email...
+            </p>
+          </div>
+        </AuthPageShell>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

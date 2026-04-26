@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { KeyRound } from "lucide-react";
 
 import LoginForm from "@/components/auth/LoginForm";
@@ -10,7 +11,6 @@ import { useLoginPage } from "@/hooks/auth/use-login-page";
 function LoginPageShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] px-4 py-8">
-      {/* Language switcher */}
       <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
         <LanguageSwitcher variant="dark" align="right" />
       </div>
@@ -37,7 +37,6 @@ function LoginPageHeader({ title }: { title: string }) {
 function LoginPageCheckingState({ label }: { label: string }) {
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] px-4">
-      {/* Language switcher also visible while loading */}
       <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
         <LanguageSwitcher variant="dark" align="right" />
       </div>
@@ -49,7 +48,7 @@ function LoginPageCheckingState({ label }: { label: string }) {
   );
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const {
     role,
     identifier,
@@ -101,5 +100,13 @@ export default function LoginPage() {
         />
       )}
     </LoginPageShell>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageCheckingState label="Checking session..." />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

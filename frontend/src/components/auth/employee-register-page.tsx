@@ -13,7 +13,6 @@ export default function EmployeeRegisterPage() {
     >
       <RegisterForm
         role="employee"
-        title="Creează cont angajat"
         submitLabel="Creează cont"
         successMessage="Cererea pentru cont de angajat a fost trimisă. Verifică emailul pentru confirmare, dacă acest flux este activ în backend."
       />

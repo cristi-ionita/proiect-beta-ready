@@ -6,7 +6,7 @@ import { getAllLeaveRequests, reviewLeaveRequest } from "@/services/leave.api";
 import { isApiClientError } from "@/lib/api-error";
 import type { LeaveRequestItem, LeaveStatus } from "@/services/leave.api";
 
-type ReviewStatus = Exclude<LeaveStatus, "pending">;
+type ReviewStatus = "approved" | "rejected";
 
 type UseAdminLeaveParams = {
   loadErrorMessage: string;
