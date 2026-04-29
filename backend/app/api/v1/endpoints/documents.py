@@ -5,7 +5,17 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Path as PathParam,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,12 +35,14 @@ from app.schemas.document import DocumentListResponseSchema, DocumentReadSchema
 router = APIRouter(prefix="/documents", tags=["documents"])
 settings = get_settings()
 
-UPLOAD_DIR = Path(settings.documents_upload_path)
+UPLOAD_DIR = Path(settings.documents_upload_path).resolve()
+
 ALLOWED_MIME_TYPES = {
     "application/pdf",
     "image/png",
     "image/jpeg",
 }
+
 PDF_SIGNATURE = b"%PDF"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 JPEG_SIGNATURE_START = b"\xff\xd8"
@@ -38,17 +50,11 @@ JPEG_SIGNATURE_END = b"\xff\xd9"
 
 
 def _bad_request(detail: str) -> None:
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=detail,
-    )
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
 def _forbidden(detail: str = "Access denied.") -> None:
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=detail,
-    )
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
 
 def _ensure_upload_dir() -> None:
@@ -57,9 +63,11 @@ def _ensure_upload_dir() -> None:
 
 def _detect_file_size(file: UploadFile) -> int:
     current_position = file.file.tell()
+
     file.file.seek(0, 2)
     size = file.file.tell()
     file.file.seek(current_position)
+
     return size
 
 
@@ -82,6 +90,7 @@ def _read_file_edges(
         suffix = file.file.read()
 
     file.file.seek(0)
+
     return prefix, suffix
 
 
@@ -99,7 +108,9 @@ def _validate_file_signature(file: UploadFile) -> None:
         return
 
     if file.content_type == "image/jpeg":
-        if not prefix.startswith(JPEG_SIGNATURE_START) or not suffix.endswith(JPEG_SIGNATURE_END):
+        if not prefix.startswith(JPEG_SIGNATURE_START) or not suffix.endswith(
+            JPEG_SIGNATURE_END
+        ):
             _bad_request("Invalid JPEG file.")
         return
 
@@ -114,6 +125,7 @@ def _validate_file(file: UploadFile) -> int:
         _bad_request("Invalid file name.")
 
     file_size = _detect_file_size(file)
+
     if file_size <= 0:
         _bad_request("Empty files are not allowed.")
 
@@ -146,47 +158,67 @@ def _parse_document_category(value: str) -> DocumentCategory:
 
 def _safe_original_name(file: UploadFile) -> str:
     original_name = Path(file.filename or "").name.strip()
+
     if not original_name:
         _bad_request("Invalid file name.")
+
     return original_name
 
 
 def _extension_for_mime_type(mime_type: str) -> str:
     if mime_type == "application/pdf":
         return ".pdf"
+
     if mime_type == "image/png":
         return ".png"
+
     if mime_type == "image/jpeg":
         return ".jpg"
+
     _bad_request("Unsupported file type.")
+
     return ""
 
 
 def _save_file(file: UploadFile, user_id: int) -> tuple[str, str]:
     _ensure_upload_dir()
 
-    user_dir = UPLOAD_DIR / f"user_{user_id}"
+    user_dir = (UPLOAD_DIR / f"user_{user_id}").resolve()
+
+    try:
+        user_dir.relative_to(UPLOAD_DIR)
+    except ValueError as exc:
+        _forbidden("Invalid upload path.")
+        raise exc
+
     user_dir.mkdir(parents=True, exist_ok=True)
 
     original_name = _safe_original_name(file)
     extension = _extension_for_mime_type(file.content_type or "")
     storage_name = f"{uuid.uuid4().hex}{extension}"
-    path = user_dir / storage_name
+    path = (user_dir / storage_name).resolve()
+
+    try:
+        path.relative_to(user_dir)
+    except ValueError as exc:
+        _forbidden("Invalid upload path.")
+        raise exc
 
     file.file.seek(0)
-    with path.open("wb") as buffer:
+
+    with path.open("xb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+
     file.file.seek(0)
 
-    return original_name, str(path.resolve())
+    return original_name, str(path)
 
 
 def _resolve_document_path(file_path: str) -> Path:
     resolved = Path(file_path).resolve()
-    upload_root = UPLOAD_DIR.resolve()
 
     try:
-        resolved.relative_to(upload_root)
+        resolved.relative_to(UPLOAD_DIR)
     except ValueError as exc:
         _forbidden("Invalid document path.")
         raise exc
@@ -274,16 +306,19 @@ async def get_my_documents(
     )
 
     return DocumentListResponseSchema(
-        documents=[DocumentReadSchema.model_validate(d) for d in result.scalars().all()]
+        documents=[
+            DocumentReadSchema.model_validate(document)
+            for document in result.scalars().all()
+        ]
     )
 
 
 @router.get("/{doc_id}/download")
 async def download_my_document(
-    doc_id: int,
+    doc_id: int = PathParam(..., gt=0),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_employee),
-):
+) -> FileResponse:
     doc = await _get_document_or_404(db, doc_id)
 
     if doc.user_id != current_user.id:
@@ -302,7 +337,7 @@ async def download_my_document(
 
 @router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_my_document(
-    doc_id: int,
+    doc_id: int = PathParam(..., gt=0),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_employee),
 ) -> Response:
@@ -323,7 +358,7 @@ async def delete_my_document(
 
 @router.get("/admin/{user_id}", response_model=DocumentListResponseSchema)
 async def get_user_documents(
-    user_id: int,
+    user_id: int = PathParam(..., gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> DocumentListResponseSchema:
@@ -336,18 +371,20 @@ async def get_user_documents(
     )
 
     return DocumentListResponseSchema(
-        documents=[DocumentReadSchema.model_validate(d) for d in result.scalars().all()]
+        documents=[
+            DocumentReadSchema.model_validate(document)
+            for document in result.scalars().all()
+        ]
     )
 
 
 @router.get("/admin/file/{doc_id}/download")
 async def admin_download_document(
-    doc_id: int,
+    doc_id: int = PathParam(..., gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
-):
+) -> FileResponse:
     doc = await _get_document_or_404(db, doc_id)
-
     path = _resolve_document_path(doc.file_path)
 
     if not path.exists() or not path.is_file():
@@ -361,7 +398,7 @@ async def admin_download_document(
 
 @router.delete("/admin/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def admin_delete_document(
-    doc_id: int,
+    doc_id: int = PathParam(..., gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> Response:
@@ -382,7 +419,7 @@ async def admin_delete_document(
     status_code=status.HTTP_201_CREATED,
 )
 async def admin_upload_document(
-    user_id: int,
+    user_id: int = PathParam(..., gt=0),
     type: str = Form(...),
     category: str = Form(...),
     file: UploadFile = File(...),

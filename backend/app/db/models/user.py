@@ -147,8 +147,8 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
-        
     )
+
     password_reset_token_hash: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
@@ -158,6 +158,7 @@ class User(Base):
     password_reset_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+        index=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(

@@ -28,21 +28,30 @@ class UserBaseSchema(BaseSchema):
     username: str | None = Field(default=None, max_length=50)
     shift_number: str | None = Field(default=None, max_length=20)
 
-    @field_validator("full_name")
+    @field_validator("full_name", mode="before")
     @classmethod
-    def validate_full_name(cls, value: str) -> str:
+    def validate_full_name(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("full_name must be a string")
+
         cleaned = " ".join(value.strip().split())
+
         if not cleaned:
             raise ValueError("full_name must not be blank")
+
         return cleaned
 
-    @field_validator("unique_code", "username", "shift_number")
+    @field_validator("unique_code", "username", "shift_number", mode="before")
     @classmethod
-    def normalize_optional_strings(cls, value: str | None) -> str | None:
+    def normalize_optional_strings(cls, value: object) -> str | None:
         if value is None:
             return None
 
+        if not isinstance(value, str):
+            raise ValueError("value must be a string")
+
         cleaned = value.strip()
+
         return cleaned or None
 
 
@@ -50,12 +59,17 @@ class UserCreateSchema(UserBaseSchema):
     password: str = Field(..., min_length=8, max_length=128)
     role: UserRole = UserRole.EMPLOYEE
 
-    @field_validator("password")
+    @field_validator("password", mode="before")
     @classmethod
-    def validate_password(cls, value: str) -> str:
+    def validate_password(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("password must be a string")
+
         cleaned = value.strip()
+
         if len(cleaned) < 8:
             raise ValueError("password must be at least 8 characters")
+
         return cleaned
 
 
@@ -65,18 +79,28 @@ class UserLoginSchema(BaseSchema):
 
     @field_validator("username", mode="before")
     @classmethod
-    def normalize_username(cls, value: str) -> str:
+    def normalize_username(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("username must be a string")
+
         cleaned = value.strip()
+
         if not cleaned:
             raise ValueError("username must not be blank")
+
         return cleaned
 
-    @field_validator("password")
+    @field_validator("password", mode="before")
     @classmethod
-    def validate_password(cls, value: str) -> str:
+    def validate_password(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("password must be a string")
+
         cleaned = value.strip()
+
         if not cleaned:
             raise ValueError("password must not be blank")
+
         return cleaned
 
 
@@ -85,22 +109,30 @@ class UserUpdateMeSchema(BaseSchema):
     current_password: str | None = Field(default=None, min_length=1, max_length=128)
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
-    @field_validator("username")
+    @field_validator("username", mode="before")
     @classmethod
-    def normalize_username(cls, value: str | None) -> str | None:
+    def normalize_username(cls, value: object) -> str | None:
         if value is None:
             return None
 
+        if not isinstance(value, str):
+            raise ValueError("username must be a string")
+
         cleaned = value.strip()
+
         return cleaned or None
 
-    @field_validator("current_password", "password")
+    @field_validator("current_password", "password", mode="before")
     @classmethod
-    def normalize_password(cls, value: str | None) -> str | None:
+    def normalize_password(cls, value: object) -> str | None:
         if value is None:
             return None
 
+        if not isinstance(value, str):
+            raise ValueError("password must be a string")
+
         cleaned = value.strip()
+
         return cleaned or None
 
 
@@ -141,12 +173,17 @@ class PendingUserListItemSchema(UserSummarySchema):
 class UserRejectRequestSchema(BaseSchema):
     reason: str = Field(..., min_length=3, max_length=500)
 
-    @field_validator("reason")
+    @field_validator("reason", mode="before")
     @classmethod
-    def validate_reason(cls, value: str) -> str:
+    def validate_reason(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("reason must be a string")
+
         cleaned = " ".join(value.strip().split())
+
         if not cleaned:
             raise ValueError("reason must not be blank")
+
         return cleaned
 
 
@@ -158,6 +195,7 @@ class UserStatusUpdateSchema(BaseSchema):
     def validate_status(cls, value: UserStatus) -> UserStatus:
         if value == UserStatus.PENDING:
             raise ValueError("status update to pending is not allowed")
+
         return value
 
 

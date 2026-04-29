@@ -54,8 +54,8 @@ class Document(Base):
             name="ck_documents_title_not_blank_when_present",
         ),
         CheckConstraint(
-            "file_size IS NULL OR file_size >= 0",
-            name="ck_documents_file_size_non_negative",
+            "file_size IS NOT NULL AND file_size > 0",
+            name="ck_documents_file_size_positive",
         ),
     )
 
@@ -126,9 +126,9 @@ class Document(Base):
         nullable=False,
     )
 
-    file_size: Mapped[int | None] = mapped_column(
+    file_size: Mapped[int] = mapped_column(
         Integer,
-        nullable=True,
+        nullable=False,
     )
 
     expires_at: Mapped[datetime | None] = mapped_column(

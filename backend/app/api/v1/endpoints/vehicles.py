@@ -1,15 +1,26 @@
 from __future__ import annotations
 
-import os
 import shutil
+import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Path as PathParam,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import require_admin
+from app.core.config import settings
 from app.db.models.user import User
 from app.db.models.vehicle import Vehicle
 from app.db.models.vehicle_assignment import AssignmentStatus, VehicleAssignment
@@ -20,15 +31,35 @@ from app.schemas.vehicle_live_status import VehicleLiveStatusResponseSchema
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 
-UPLOAD_DIR = Path("uploads/vehicles")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR = Path("uploads/vehicles").resolve()
+
+ALLOWED_PHOTO_MIME_TYPES = {
+    "image/png",
+    "image/jpeg",
+}
+
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+JPEG_SIGNATURE_START = b"\xff\xd8"
+JPEG_SIGNATURE_END = b"\xff\xd9"
+
+
+def _bad_request(detail: str) -> None:
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+def _forbidden(detail: str = "Access denied.") -> None:
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+
+
+def _ensure_upload_dir() -> None:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _normalize_license_plate(value: str) -> str:
     cleaned = " ".join(value.strip().split()).upper()
 
     if not cleaned:
-        raise HTTPException(status_code=400, detail="License plate is required.")
+        _bad_request("License plate is required.")
 
     return cleaned
 
@@ -37,9 +68,147 @@ def _normalize_vehicle_name(value: str) -> str:
     cleaned = " ".join(value.strip().split())
 
     if not cleaned:
-        raise HTTPException(status_code=400, detail="Vehicle field is required.")
+        _bad_request("Vehicle field is required.")
 
     return cleaned.title()
+
+
+def _detect_file_size(file: UploadFile) -> int:
+    current_position = file.file.tell()
+
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(current_position)
+
+    return size
+
+
+def _read_file_edges(
+    file: UploadFile,
+    max_prefix: int = 16,
+    max_suffix: int = 2,
+) -> tuple[bytes, bytes]:
+    file.file.seek(0)
+    prefix = file.file.read(max_prefix)
+
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+
+    if file_size >= max_suffix:
+        file.file.seek(file_size - max_suffix)
+        suffix = file.file.read(max_suffix)
+    else:
+        file.file.seek(0)
+        suffix = file.file.read()
+
+    file.file.seek(0)
+
+    return prefix, suffix
+
+
+def _validate_photo_signature(file: UploadFile) -> None:
+    prefix, suffix = _read_file_edges(file)
+
+    if file.content_type == "image/png":
+        if not prefix.startswith(PNG_SIGNATURE):
+            _bad_request("Invalid PNG file.")
+        return
+
+    if file.content_type == "image/jpeg":
+        if not prefix.startswith(JPEG_SIGNATURE_START) or not suffix.endswith(
+            JPEG_SIGNATURE_END
+        ):
+            _bad_request("Invalid JPEG file.")
+        return
+
+    _bad_request("Unsupported photo type.")
+
+
+def _validate_photo(file: UploadFile) -> int:
+    if file.content_type not in ALLOWED_PHOTO_MIME_TYPES:
+        _bad_request("Unsupported photo type.")
+
+    if not file.filename or not file.filename.strip():
+        _bad_request("Invalid photo file name.")
+
+    file_size = _detect_file_size(file)
+
+    if file_size <= 0:
+        _bad_request("Empty photos are not allowed.")
+
+    if file_size > settings.MAX_UPLOAD_SIZE_BYTES:
+        _bad_request(
+            f"Photo too large. Maximum allowed size is {settings.MAX_UPLOAD_SIZE_BYTES} bytes."
+        )
+
+    _validate_photo_signature(file)
+    file.file.seek(0)
+
+    return file_size
+
+
+def _extension_for_mime_type(mime_type: str) -> str:
+    if mime_type == "image/png":
+        return ".png"
+
+    if mime_type == "image/jpeg":
+        return ".jpg"
+
+    _bad_request("Unsupported photo type.")
+
+    return ""
+
+
+def _resolve_vehicle_photo_path(file_path: str) -> Path:
+    resolved = Path(file_path).resolve()
+
+    try:
+        resolved.relative_to(UPLOAD_DIR)
+    except ValueError as exc:
+        _forbidden("Invalid photo path.")
+        raise exc
+
+    return resolved
+
+
+def _save_vehicle_photo_file(
+    *,
+    file: UploadFile,
+    vehicle_id: int,
+    photo_type: VehiclePhotoType,
+) -> tuple[str, str, int]:
+    _ensure_upload_dir()
+
+    file_size = _validate_photo(file)
+
+    vehicle_folder = (UPLOAD_DIR / f"vehicle_{vehicle_id}").resolve()
+
+    try:
+        vehicle_folder.relative_to(UPLOAD_DIR)
+    except ValueError as exc:
+        _forbidden("Invalid upload path.")
+        raise exc
+
+    vehicle_folder.mkdir(parents=True, exist_ok=True)
+
+    extension = _extension_for_mime_type(file.content_type or "")
+    file_name = f"{photo_type.value}_{uuid.uuid4().hex}{extension}"
+    file_path = (vehicle_folder / file_name).resolve()
+
+    try:
+        file_path.relative_to(vehicle_folder)
+    except ValueError as exc:
+        _forbidden("Invalid upload path.")
+        raise exc
+
+    file.file.seek(0)
+
+    with file_path.open("xb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    file.file.seek(0)
+
+    return file_name, str(file_path), file_size
 
 
 async def _get_vehicle_or_404(db: AsyncSession, vehicle_id: int) -> Vehicle:
@@ -48,7 +217,10 @@ async def _get_vehicle_or_404(db: AsyncSession, vehicle_id: int) -> Vehicle:
     ).scalar_one_or_none()
 
     if vehicle is None:
-        raise HTTPException(status_code=404, detail="Vehicle not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found.",
+        )
 
     return vehicle
 
@@ -66,7 +238,10 @@ async def _ensure_unique_license_plate(
     existing = (await db.execute(query)).scalar_one_or_none()
 
     if existing is not None:
-        raise HTTPException(status_code=409, detail="License plate already exists.")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="License plate already exists.",
+        )
 
 
 async def _get_active_assignment_with_user(
@@ -102,6 +277,7 @@ def _vehicle_response(
 ) -> VehicleReadSchema:
     data = VehicleReadSchema.model_validate(vehicle).model_dump()
     data["assigned_to_shift_number"] = shift_number
+
     return VehicleReadSchema(**data)
 
 
@@ -190,7 +366,7 @@ async def get_live_status(
 
 @router.get("/{vehicle_id}", response_model=VehicleReadSchema)
 async def get_vehicle(
-    vehicle_id: int,
+    vehicle_id: int = PathParam(..., gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> VehicleReadSchema:
@@ -204,8 +380,8 @@ async def get_vehicle(
 
 @router.put("/{vehicle_id}", response_model=VehicleReadSchema)
 async def update_vehicle(
-    vehicle_id: int,
-    payload: VehicleUpdateSchema,
+    vehicle_id: int = PathParam(..., gt=0),
+    payload: VehicleUpdateSchema = ...,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> VehicleReadSchema:
@@ -236,7 +412,7 @@ async def update_vehicle(
 
 @router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_vehicle(
-    vehicle_id: int,
+    vehicle_id: int = PathParam(..., gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> Response:
@@ -256,47 +432,60 @@ async def delete_vehicle(
 
 @router.post("/{vehicle_id}/photos")
 async def upload_vehicle_photos(
-    vehicle_id: int,
+    vehicle_id: int = PathParam(..., gt=0),
     files: list[UploadFile] = File(...),
     type: VehiclePhotoType = Form(...),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
-):
+) -> dict[str, int]:
+    if not files:
+        _bad_request("At least one photo is required.")
+
+    if len(files) > 20:
+        _bad_request("You can upload a maximum of 20 photos at once.")
+
     vehicle = await _get_vehicle_or_404(db, vehicle_id)
 
-    vehicle_folder = UPLOAD_DIR / f"vehicle_{vehicle.id}"
-    vehicle_folder.mkdir(parents=True, exist_ok=True)
+    saved_paths: list[str] = []
 
-    for file in files:
-        file_ext = os.path.splitext(file.filename or "")[1]
-        file_name = f"{type.value}_{os.urandom(6).hex()}{file_ext}"
-        file_path = vehicle_folder / file_name
-
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        db.add(
-            VehiclePhoto(
+    try:
+        for file in files:
+            file_name, file_path, file_size = _save_vehicle_photo_file(
+                file=file,
                 vehicle_id=vehicle.id,
-                type=type,
-                file_name=file_name,
-                file_path=str(file_path),
-                mime_type=file.content_type or "application/octet-stream",
-                file_size=file.size or 0,
+                photo_type=type,
             )
-        )
+            saved_paths.append(file_path)
 
-    await db.commit()
+            db.add(
+                VehiclePhoto(
+                    vehicle_id=vehicle.id,
+                    type=type,
+                    file_name=file_name,
+                    file_path=file_path,
+                    mime_type=file.content_type or "application/octet-stream",
+                    file_size=file_size,
+                )
+            )
+
+        await db.commit()
+    except Exception:
+        await db.rollback()
+
+        for path in saved_paths:
+            Path(path).unlink(missing_ok=True)
+
+        raise
 
     return {"uploaded": len(files)}
 
 
 @router.get("/{vehicle_id}/photos")
 async def get_vehicle_photos(
-    vehicle_id: int,
+    vehicle_id: int = PathParam(..., gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
-):
+) -> list[dict[str, object]]:
     vehicle = await _get_vehicle_or_404(db, vehicle_id)
 
     photos = (
@@ -322,19 +511,30 @@ async def get_vehicle_photos(
 
 @router.get("/photos/{photo_id}/file")
 async def get_vehicle_photo_file(
-    photo_id: int,
+    photo_id: int = PathParam(..., gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
-):
+) -> FileResponse:
     photo = (
         await db.execute(select(VehiclePhoto).where(VehiclePhoto.id == photo_id))
     ).scalar_one_or_none()
 
     if photo is None:
-        raise HTTPException(status_code=404, detail="Photo not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Photo not found.",
+        )
+
+    path = _resolve_vehicle_photo_path(photo.file_path)
+
+    if not path.exists() or not path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Photo file missing.",
+        )
 
     return FileResponse(
-        photo.file_path,
+        path,
         media_type=photo.mime_type,
         filename=photo.file_name,
     )

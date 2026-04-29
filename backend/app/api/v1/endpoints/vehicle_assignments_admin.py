@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -91,8 +91,8 @@ async def list_rejected_assignments(
 @router.get("", response_model=VehicleAssignmentListResponseSchema)
 async def list_assignments(
     status_filter: str | None = Query(default=None, alias="status"),
-    user_id: int | None = Query(default=None),
-    vehicle_id: int | None = Query(default=None),
+    user_id: int | None = Query(default=None, gt=0),
+    vehicle_id: int | None = Query(default=None, gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> VehicleAssignmentListResponseSchema:
@@ -139,7 +139,7 @@ async def list_assignments(
     response_model=VehicleAssignmentCloseResponseSchema,
 )
 async def close_assignment(
-    assignment_id: int,
+    assignment_id: int = Path(..., gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> VehicleAssignmentCloseResponseSchema:
@@ -153,9 +153,15 @@ async def close_assignment(
         assignment=assignment,
     )
 
+    if assignment.ended_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Closed assignment is missing ended_at.",
+        )
+
     return VehicleAssignmentCloseResponseSchema(
         id=assignment.id,
-        status=assignment.status.value,
+        status=assignment.status,
         ended_at=assignment.ended_at,
     )
 
@@ -166,7 +172,7 @@ async def close_assignment(
     response_class=Response,
 )
 async def delete_closed_assignment(
-    assignment_id: int,
+    assignment_id: int = Path(..., gt=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ) -> Response:

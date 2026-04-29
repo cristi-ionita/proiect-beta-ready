@@ -15,28 +15,33 @@ class VehicleStatus(str, Enum):
     OUT_OF_SERVICE = "out_of_service"
 
 
-def _normalize_text(value: str) -> str:
+def _normalize_text(value: object) -> str:
+    if not isinstance(value, str):
+        raise ValueError("This field must be a string.")
+
     cleaned = " ".join(value.strip().split())
+
     if not cleaned:
         raise ValueError("This field is required.")
+
     return cleaned
 
 
 class VehicleBaseSchema(BaseSchema):
     brand: str = Field(..., min_length=1, max_length=100)
     model: str = Field(..., min_length=1, max_length=100)
-    license_plate: str = Field(..., min_length=1, max_length=20)
+    license_plate: str = Field(..., min_length=1, max_length=30)
     status: VehicleStatus = VehicleStatus.AVAILABLE
     current_mileage: int = Field(default=0, ge=0)
 
     @field_validator("brand", "model", mode="before")
     @classmethod
-    def validate_required_text(cls, value: str) -> str:
+    def validate_required_text(cls, value: object) -> str:
         return _normalize_text(value)
 
     @field_validator("license_plate", mode="before")
     @classmethod
-    def normalize_license_plate(cls, value: str) -> str:
+    def normalize_license_plate(cls, value: object) -> str:
         return _normalize_text(value).upper()
 
 
@@ -47,22 +52,24 @@ class VehicleCreateSchema(VehicleBaseSchema):
 class VehicleUpdateSchema(BaseSchema):
     brand: str | None = Field(default=None, min_length=1, max_length=100)
     model: str | None = Field(default=None, min_length=1, max_length=100)
-    license_plate: str | None = Field(default=None, min_length=1, max_length=20)
+    license_plate: str | None = Field(default=None, min_length=1, max_length=30)
     status: VehicleStatus | None = None
     current_mileage: int | None = Field(default=None, ge=0)
 
     @field_validator("brand", "model", mode="before")
     @classmethod
-    def validate_optional_text(cls, value: str | None) -> str | None:
+    def validate_optional_text(cls, value: object) -> str | None:
         if value is None:
             return None
+
         return _normalize_text(value)
 
     @field_validator("license_plate", mode="before")
     @classmethod
-    def normalize_optional_license_plate(cls, value: str | None) -> str | None:
+    def normalize_optional_license_plate(cls, value: object) -> str | None:
         if value is None:
             return None
+
         return _normalize_text(value).upper()
 
 
@@ -70,6 +77,4 @@ class VehicleReadSchema(VehicleBaseSchema):
     id: int
     created_at: datetime
     updated_at: datetime
-
-    # 🔑 IMPORTANT pentru UI
     assigned_to_shift_number: str | int | None = None

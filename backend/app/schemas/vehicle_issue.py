@@ -23,11 +23,15 @@ class VehicleIssuePriority(str, Enum):
     CRITICAL = "critical"
 
 
-def _normalize_optional_text(value: str | None) -> str | None:
+def _normalize_optional_text(value: object) -> str | None:
     if value is None:
         return None
 
+    if not isinstance(value, str):
+        raise ValueError("Field must be a string.")
+
     cleaned = " ".join(value.strip().split())
+
     return cleaned or None
 
 
@@ -37,13 +41,13 @@ class VehicleIssueCreateRequestSchema(BaseSchema):
     need_brakes: bool = False
     need_tires: bool = False
     need_oil: bool = False
-    dashboard_checks: str | None = None
-    other_problems: str | None = None
+    dashboard_checks: str | None = Field(default=None, max_length=5000)
+    other_problems: str | None = Field(default=None, max_length=5000)
     has_photos: bool = False
 
     @field_validator("dashboard_checks", "other_problems", mode="before")
     @classmethod
-    def clean_text_fields(cls, value: str | None) -> str | None:
+    def clean_text_fields(cls, value: object) -> str | None:
         return _normalize_optional_text(value)
 
 
@@ -54,24 +58,37 @@ class VehicleIssueUpdateRequestSchema(BaseSchema):
     scheduled_location: str | None = Field(default=None, max_length=255)
     started_at: datetime | None = None
     resolved_at: datetime | None = None
-    resolution_notes: str | None = None
+    resolution_notes: str | None = Field(default=None, max_length=5000)
     estimated_cost: int | None = Field(default=None, ge=0)
     final_cost: int | None = Field(default=None, ge=0)
     priority: VehicleIssuePriority | None = None
 
     @field_validator("scheduled_location", "resolution_notes", mode="before")
     @classmethod
-    def clean_optional_text_fields(cls, value: str | None) -> str | None:
+    def clean_optional_text_fields(cls, value: object) -> str | None:
         return _normalize_optional_text(value)
 
 
 class VehicleIssuePhotoSchema(BaseSchema):
     id: int
-    file_name: str
-    file_path: str
-    mime_type: str
-    file_size: int
+    file_name: str = Field(..., min_length=1, max_length=255)
+    file_path: str = Field(..., min_length=1, max_length=500)
+    mime_type: str = Field(..., min_length=1, max_length=100)
+    file_size: int = Field(..., gt=0)
     created_at: datetime
+
+    @field_validator("file_name", "file_path", "mime_type", mode="before")
+    @classmethod
+    def normalize_required_text(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("Field must be a string.")
+
+        cleaned = " ".join(value.strip().split())
+
+        if not cleaned:
+            raise ValueError("Field must not be empty.")
+
+        return cleaned
 
 
 class VehicleIssueReadSchema(BaseSchema):

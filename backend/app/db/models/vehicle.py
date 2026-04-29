@@ -54,7 +54,7 @@ class Vehicle(Base):
     )
 
     license_plate: Mapped[str] = mapped_column(
-        String(20),
+        String(30),
         unique=True,
         nullable=False,
         index=True,
@@ -64,7 +64,7 @@ class Vehicle(Base):
         SqlEnum(
             VehicleStatus,
             name="vehicle_status",
-            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
         ),
         default=VehicleStatus.AVAILABLE,
         server_default=VehicleStatus.AVAILABLE.value,
@@ -77,6 +77,7 @@ class Vehicle(Base):
         default=0,
         server_default="0",
         nullable=False,
+        index=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(

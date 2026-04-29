@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +19,25 @@ class VehiclePhotoType(str, Enum):
 
 class VehiclePhoto(Base):
     __tablename__ = "vehicle_photos"
+
+    __table_args__ = (
+        CheckConstraint(
+            "char_length(trim(file_name)) > 0",
+            name="ck_vehicle_photos_file_name_not_blank",
+        ),
+        CheckConstraint(
+            "char_length(trim(file_path)) > 0",
+            name="ck_vehicle_photos_file_path_not_blank",
+        ),
+        CheckConstraint(
+            "char_length(trim(mime_type)) > 0",
+            name="ck_vehicle_photos_mime_type_not_blank",
+        ),
+        CheckConstraint(
+            "file_size >= 0",
+            name="ck_vehicle_photos_file_size_non_negative",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
@@ -38,10 +57,26 @@ class VehiclePhoto(Base):
         index=True,
     )
 
-    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    file_name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    file_path: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        unique=True,  # previne duplicate / overwrite path reuse
+    )
+
+    mime_type: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    file_size: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

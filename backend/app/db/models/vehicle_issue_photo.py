@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -10,6 +10,25 @@ from app.db.base import Base
 
 class VehicleIssuePhoto(Base):
     __tablename__ = "vehicle_issue_photos"
+
+    __table_args__ = (
+        CheckConstraint(
+            "char_length(trim(file_name)) > 0",
+            name="ck_vehicle_issue_photos_file_name_not_blank",
+        ),
+        CheckConstraint(
+            "char_length(trim(file_path)) > 0",
+            name="ck_vehicle_issue_photos_file_path_not_blank",
+        ),
+        CheckConstraint(
+            "char_length(trim(mime_type)) > 0",
+            name="ck_vehicle_issue_photos_mime_type_not_blank",
+        ),
+        CheckConstraint(
+            "file_size > 0",
+            name="ck_vehicle_issue_photos_file_size_positive",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
@@ -27,6 +46,7 @@ class VehicleIssuePhoto(Base):
     file_path: Mapped[str] = mapped_column(
         String(500),
         nullable=False,
+        unique=True,
     )
 
     mime_type: Mapped[str] = mapped_column(
@@ -43,6 +63,7 @@ class VehicleIssuePhoto(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+        index=True,
     )
 
     issue = relationship("VehicleIssue", back_populates="photos")

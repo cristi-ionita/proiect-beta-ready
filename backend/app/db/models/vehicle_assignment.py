@@ -35,20 +35,24 @@ class VehicleAssignment(Base):
             name="ck_vehicle_assignments_notes_not_blank_when_present",
         ),
         CheckConstraint(
-            "shift_number > 0",
-            name="ck_vehicle_assignments_shift_number_positive",
+            "shift_number IS NULL OR shift_number > 0",
+            name="ck_vehicle_assignments_shift_number_positive_when_present",
         ),
         Index(
             "ux_vehicle_assignments_active_vehicle",
             "vehicle_id",
             unique=True,
-            postgresql_where=text("status IN ('pending', 'active') AND ended_at IS NULL"),
+            postgresql_where=text(
+                "status IN ('pending', 'active') AND ended_at IS NULL"
+            ),
         ),
         Index(
             "ux_vehicle_assignments_active_user",
             "user_id",
             unique=True,
-            postgresql_where=text("status IN ('pending', 'active') AND ended_at IS NULL"),
+            postgresql_where=text(
+                "status IN ('pending', 'active') AND ended_at IS NULL"
+            ),
         ),
     )
 
@@ -70,13 +74,13 @@ class VehicleAssignment(Base):
         Integer,
         nullable=True,
         index=True,
-)
+    )
 
     status: Mapped[AssignmentStatus] = mapped_column(
         SqlEnum(
             AssignmentStatus,
             name="assignment_status",
-            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
         ),
         default=AssignmentStatus.PENDING,
         server_default=AssignmentStatus.PENDING.value,

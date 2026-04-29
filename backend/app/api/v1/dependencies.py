@@ -18,7 +18,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 WWW_AUTHENTICATE_HEADER: Final[dict[str, str]] = {"WWW-Authenticate": "Bearer"}
 
 
-def _raise_unauthorized(detail: str = "Invalid or expired authentication token") -> None:
+def _raise_unauthorized(
+    detail: str = "Invalid or expired authentication token",
+) -> None:
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=detail,
@@ -43,17 +45,19 @@ async def get_current_user(
         _raise_unauthorized(str(exc))
 
     subject = payload.get("sub")
+
     if subject is None:
-        _raise_unauthorized("Authentication token is missing subject")
+        _raise_unauthorized("Authentication token is missing subject.")
 
     try:
         user_id = int(subject)
     except (TypeError, ValueError):
-        _raise_unauthorized("Authentication token subject is invalid")
+        _raise_unauthorized("Authentication token subject is invalid.")
 
     user = await db.get(User, user_id)
+
     if user is None:
-        _raise_unauthorized("Authenticated user no longer exists")
+        _raise_unauthorized("Authenticated user no longer exists.")
 
     return user
 
@@ -62,7 +66,8 @@ async def require_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
     if not current_user.is_active:
-        _raise_forbidden("Inactive user account")
+        _raise_forbidden("Inactive user account.")
+
     return current_user
 
 
@@ -70,9 +75,8 @@ async def require_approved_user(
     current_user: User = Depends(require_active_user),
 ) -> User:
     if current_user.status != UserStatus.APPROVED.value:
-        _raise_forbidden(
-            f"User account is not approved. Current status: {current_user.status}"
-        )
+        _raise_forbidden("User account is not approved.")
+
     return current_user
 
 
@@ -88,7 +92,8 @@ def _require_role(
 ) -> User:
     if current_user.role != required_role.value:
         readable_role = required_role.value.capitalize()
-        _raise_forbidden(f"{readable_role} access required")
+        _raise_forbidden(f"{readable_role} access required.")
+
     return current_user
 
 

@@ -15,10 +15,7 @@ from app.schemas.vehicle_assignment_admin import VehicleAssignmentReadSchema
 
 class VehicleAssignmentService:
     @staticmethod
-    async def get_user_or_404(
-        db: AsyncSession,
-        user_id: int,
-    ) -> User:
+    async def get_user_or_404(db: AsyncSession, user_id: int) -> User:
         user = (
             await db.execute(select(User).where(User.id == user_id))
         ).scalar_one_or_none()
@@ -32,10 +29,7 @@ class VehicleAssignmentService:
         return user
 
     @staticmethod
-    async def get_vehicle_or_404(
-        db: AsyncSession,
-        vehicle_id: int,
-    ) -> Vehicle:
+    async def get_vehicle_or_404(db: AsyncSession, vehicle_id: int) -> Vehicle:
         vehicle = (
             await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
         ).scalar_one_or_none()
@@ -55,9 +49,7 @@ class VehicleAssignmentService:
     ) -> VehicleAssignment:
         assignment = (
             await db.execute(
-                select(VehicleAssignment).where(
-                    VehicleAssignment.id == assignment_id
-                )
+                select(VehicleAssignment).where(VehicleAssignment.id == assignment_id)
             )
         ).scalar_one_or_none()
 
@@ -81,6 +73,7 @@ class VehicleAssignmentService:
                     VehicleAssignment.status.in_(
                         [AssignmentStatus.PENDING, AssignmentStatus.ACTIVE]
                     ),
+                    VehicleAssignment.ended_at.is_(None),
                 )
             )
         ).scalar_one_or_none()
@@ -97,6 +90,7 @@ class VehicleAssignmentService:
                     VehicleAssignment.status.in_(
                         [AssignmentStatus.PENDING, AssignmentStatus.ACTIVE]
                     ),
+                    VehicleAssignment.ended_at.is_(None),
                 )
             )
         ).scalar_one_or_none()
@@ -116,7 +110,7 @@ class VehicleAssignmentService:
             vehicle_brand=vehicle.brand,
             vehicle_model=vehicle.model,
             shift_number=assignment.shift_number,
-            status=assignment.status.value,
+            status=assignment.status,
             started_at=assignment.started_at,
             ended_at=assignment.ended_at,
         )
@@ -159,11 +153,9 @@ class VehicleAssignmentService:
             )
 
         existing_user_assignment = (
-            await VehicleAssignmentService.get_open_assignment_for_user(
-                db,
-                user.id,
-            )
+            await VehicleAssignmentService.get_open_assignment_for_user(db, user.id)
         )
+
         if existing_user_assignment is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -176,6 +168,7 @@ class VehicleAssignmentService:
                 vehicle.id,
             )
         )
+
         if existing_vehicle_assignment is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -192,6 +185,8 @@ class VehicleAssignmentService:
         vehicle.status = VehicleStatus.ASSIGNED
 
         db.add(assignment)
+        db.add(vehicle)
+
         await db.commit()
         await db.refresh(assignment)
 
@@ -202,7 +197,7 @@ class VehicleAssignmentService:
         db: AsyncSession,
         assignment: VehicleAssignment,
     ) -> VehicleAssignment:
-        if assignment.status not in [AssignmentStatus.PENDING, AssignmentStatus.ACTIVE]:
+        if assignment.status not in {AssignmentStatus.PENDING, AssignmentStatus.ACTIVE}:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only pending or active assignments can be closed.",
@@ -218,6 +213,9 @@ class VehicleAssignmentService:
 
         if vehicle.status == VehicleStatus.ASSIGNED:
             vehicle.status = VehicleStatus.AVAILABLE
+            db.add(vehicle)
+
+        db.add(assignment)
 
         await db.commit()
         await db.refresh(assignment)
@@ -229,6 +227,12 @@ class VehicleAssignmentService:
         db: AsyncSession,
         assignment: VehicleAssignment,
     ) -> None:
+        if assignment.status in {AssignmentStatus.PENDING, AssignmentStatus.ACTIVE}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only closed or rejected assignments can be deleted.",
+            )
+
         vehicle = await VehicleAssignmentService.get_vehicle_or_404(
             db,
             assignment.vehicle_id,
@@ -236,6 +240,7 @@ class VehicleAssignmentService:
 
         if vehicle.status == VehicleStatus.ASSIGNED:
             vehicle.status = VehicleStatus.AVAILABLE
+            db.add(vehicle)
 
         await db.delete(assignment)
         await db.commit()
