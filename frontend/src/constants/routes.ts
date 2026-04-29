@@ -1,4 +1,4 @@
-import { ROLES } from "./roles";
+import { ROLES, type Role } from "./roles";
 
 export const ROUTES = {
   PUBLIC: {
@@ -36,7 +36,7 @@ export const ROUTES = {
   },
 } as const;
 
-export function getDefaultRouteByRole(role: string) {
+export function getDefaultRouteByRole(role: Role | string) {
   switch (role) {
     case ROLES.ADMIN:
       return ROUTES.ADMIN.DASHBOARD;

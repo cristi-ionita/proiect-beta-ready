@@ -23,18 +23,17 @@ export interface VehicleItem {
   brand: string;
   model: string;
   license_plate: string;
-  year: number;
-  vin: string | null;
   status: VehicleStatus;
   current_mileage: number;
+  created_at: string;
+  updated_at: string;
+  assigned_to_shift_number?: string | number | null;
 }
 
 export interface CreateVehiclePayload {
   brand: string;
   model: string;
   license_plate: string;
-  year: number;
-  vin?: string | null;
   status?: VehicleStatus;
   current_mileage?: number;
 }
@@ -43,8 +42,6 @@ export type UpdateVehiclePayload = Partial<{
   brand: string;
   model: string;
   license_plate: string;
-  year: number;
-  vin: string | null;
   status: VehicleStatus;
   current_mileage: number;
 }>;
@@ -54,12 +51,11 @@ export interface VehicleLiveStatusItem {
   brand: string;
   model: string;
   license_plate: string;
-  year: number;
   vehicle_status: VehicleStatus;
   availability: VehicleAvailability;
   assigned_to_user_id: number | null;
   assigned_to_name: string | null;
-  assigned_to_shift_number: string | null;
+  assigned_to_shift_number: string | number | null;
   active_assignment_id: number | null;
 }
 
@@ -86,10 +82,10 @@ export interface MyVehicleVehicle {
   brand: string;
   model: string;
   license_plate: string;
-  year: number;
-  vin: string | null;
   status: VehicleStatus;
   current_mileage: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface MyVehicleAssignment {
@@ -120,7 +116,7 @@ export interface MyVehicleHandoverEnd {
   is_completed: boolean;
 }
 
-export interface MyVehicleIssue {
+export interface VehicleIssue {
   id: number;
   status: VehicleIssueStatus;
   need_service_in_km: number | null;
@@ -133,21 +129,23 @@ export interface MyVehicleIssue {
   updated_at: string;
 }
 
-//
-// 🔥 NOU — POZE VEHICUL
-//
+export type MyVehicleIssue = VehicleIssue;
+
+export type VehiclePhotoType =
+  | "exterior"
+  | "interior"
+  | "damage"
+  | "registration";
+
 export interface MyVehiclePhoto {
   id: number;
-  type: string; // "exterior" | "interior" | "damage" | "registration"
+  type: VehiclePhotoType;
   file_name: string;
   mime_type: string;
   file_size: number;
   created_at: string;
 }
 
-//
-// 🔥 UPDATE RESPONSE
-//
 export interface MyVehicleResponse {
   user: MyVehicleUser;
   vehicle: MyVehicleVehicle | null;
@@ -155,7 +153,5 @@ export interface MyVehicleResponse {
   handover_start: MyVehicleHandoverStart | null;
   handover_end: MyVehicleHandoverEnd | null;
   open_issues: MyVehicleIssue[];
-
-  // 🔥 ASTA FACE DIFERENȚA
   photos: MyVehiclePhoto[];
 }

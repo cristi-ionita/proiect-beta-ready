@@ -1,4 +1,4 @@
-import axios, { type AxiosError } from "axios";
+import axios from "axios";
 
 export type ApiErrorResponse = {
   error?: string;
@@ -24,9 +24,17 @@ export function normalizeApiError(error: unknown): ApiClientError {
     };
   }
 
-  const axiosError = error as AxiosError<ApiErrorResponse>;
-  const status = axiosError.response?.status;
-  const data = axiosError.response?.data;
+  const status = error.response?.status;
+  const data = error.response?.data;
+
+  if (error.code === "ECONNABORTED") {
+    return {
+      error: "REQUEST_TIMEOUT",
+      code: "errors.http.timeout",
+      message: "Request timed out.",
+      status,
+    };
+  }
 
   if (data?.message && typeof data.message === "string") {
     return {
@@ -42,9 +50,7 @@ export function normalizeApiError(error: unknown): ApiClientError {
     return {
       error: data.error,
       code: data.code,
-      message: data.details
-        .map((item) => item?.msg || "Invalid value")
-        .join(", "),
+      message: data.details.map((item) => item?.msg || "Invalid value").join(", "),
       details: data.details,
       status,
     };
@@ -86,6 +92,15 @@ export function normalizeApiError(error: unknown): ApiClientError {
     };
   }
 
+  if (status === 408) {
+    return {
+      error: "REQUEST_TIMEOUT",
+      code: "errors.http.timeout",
+      message: "Request timed out.",
+      status,
+    };
+  }
+
   if (status === 409) {
     return {
       error: "CONFLICT",
@@ -104,29 +119,11 @@ export function normalizeApiError(error: unknown): ApiClientError {
     };
   }
 
-  if (status === 408) {
-    return {
-      error: "REQUEST_TIMEOUT",
-      code: "errors.http.timeout",
-      message: "Request timed out.",
-      status,
-    };
-  }
-
   if (status && status >= 500) {
     return {
       error: "INTERNAL_SERVER_ERROR",
       code: "errors.internal",
       message: "Server error. Please try again.",
-      status,
-    };
-  }
-
-  if (error.code === "ECONNABORTED") {
-    return {
-      error: "REQUEST_TIMEOUT",
-      code: "errors.http.timeout",
-      message: "Request timed out.",
       status,
     };
   }

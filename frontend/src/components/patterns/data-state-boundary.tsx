@@ -13,6 +13,7 @@ type DataStateBoundaryProps = {
   emptyDescription?: string;
   emptyAction?: ReactNode;
   loadingText?: string;
+  className?: string;
   children: ReactNode;
 };
 
@@ -25,10 +26,11 @@ export default function DataStateBoundary({
   emptyDescription,
   emptyAction,
   loadingText,
+  className,
   children,
 }: DataStateBoundaryProps) {
   if (isLoading) {
-    return <LoadingState text={loadingText} />;
+    return <LoadingState text={loadingText} className={className} />;
   }
 
   if (isError) {
@@ -36,6 +38,7 @@ export default function DataStateBoundary({
       <Alert
         variant="error"
         message={errorMessage ?? "A apărut o eroare"}
+        className={className}
       />
     );
   }
@@ -46,6 +49,7 @@ export default function DataStateBoundary({
         title={emptyTitle}
         description={emptyDescription}
         action={emptyAction}
+        className={className}
       />
     );
   }

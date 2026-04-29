@@ -118,10 +118,7 @@ class VehicleIssue(Base):
         index=True,
     )
 
-    need_service_in_km: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
-    )
+    need_service_in_km: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     need_brakes: Mapped[bool] = mapped_column(
         Boolean,
@@ -144,15 +141,8 @@ class VehicleIssue(Base):
         server_default="false",
     )
 
-    dashboard_checks: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
-
-    other_problems: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
+    dashboard_checks: Mapped[str | None] = mapped_column(Text, nullable=True)
+    other_problems: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     status: Mapped[VehicleIssueStatus] = mapped_column(
         SqlEnum(
@@ -172,10 +162,7 @@ class VehicleIssue(Base):
         index=True,
     )
 
-    scheduled_location: Mapped[str | None] = mapped_column(
-        String(255),
-        nullable=True,
-    )
+    scheduled_location: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
@@ -189,20 +176,9 @@ class VehicleIssue(Base):
         index=True,
     )
 
-    resolution_notes: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
-
-    estimated_cost: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
-    )
-
-    final_cost: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
-    )
+    resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    estimated_cost: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    final_cost: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -220,11 +196,20 @@ class VehicleIssue(Base):
 
     vehicle = relationship("Vehicle")
     assignment = relationship("VehicleAssignment")
+
     reported_by_user = relationship(
         "User",
         foreign_keys=[reported_by_user_id],
     )
+
     assigned_mechanic = relationship(
         "User",
         foreign_keys=[assigned_mechanic_id],
+    )
+
+    photos = relationship(
+        "VehicleIssuePhoto",
+        back_populates="issue",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )

@@ -1,13 +1,4 @@
-import {
-  defaultLocale,
-  dictionaries,
-  getTranslation,
-  locales,
-  type Locale,
-  type TranslationKey,
-  type TranslationNamespace,
-} from "./dictionaries";
-import { getAdminToken, getMechanicSession, getSession } from "@/lib/auth";
+import { getAdminToken, getSession } from "@/lib/auth";
 
 export {
   dictionaries,
@@ -19,6 +10,8 @@ export {
   type TranslationNamespace,
 } from "./dictionaries";
 
+import { defaultLocale, type Locale } from "./dictionaries";
+
 const GUEST_LOCALE_STORAGE_KEY = "lang:guest";
 
 function isBrowser(): boolean {
@@ -26,9 +19,7 @@ function isBrowser(): boolean {
 }
 
 function safeRead(key: string): string | null {
-  if (!isBrowser()) {
-    return null;
-  }
+  if (!isBrowser()) return null;
 
   try {
     return window.localStorage.getItem(key);
@@ -38,9 +29,7 @@ function safeRead(key: string): string | null {
 }
 
 function safeWrite(key: string, value: string): void {
-  if (!isBrowser()) {
-    return;
-  }
+  if (!isBrowser()) return;
 
   try {
     window.localStorage.setItem(key, value);
@@ -54,22 +43,15 @@ export function isLocale(value: string | null | undefined): value is Locale {
 }
 
 function getScopedLocaleStorageKey(): string {
-  if (!isBrowser()) {
-    return GUEST_LOCALE_STORAGE_KEY;
+  if (!isBrowser()) return GUEST_LOCALE_STORAGE_KEY;
+
+  const session = getSession();
+
+  if (session?.unique_code) {
+    return `lang:${session.role}:${session.unique_code}`;
   }
 
-  const userSession = getSession();
-  if (userSession?.unique_code) {
-    return `lang:user:${userSession.unique_code}`;
-  }
-
-  const mechanicSession = getMechanicSession();
-  if (mechanicSession?.unique_code) {
-    return `lang:mechanic:${mechanicSession.unique_code}`;
-  }
-
-  const adminToken = getAdminToken();
-  if (adminToken) {
+  if (getAdminToken()) {
     return "lang:admin";
   }
 
@@ -77,14 +59,14 @@ function getScopedLocaleStorageKey(): string {
 }
 
 export function getStoredLocale(): Locale | null {
-  const scopedKey = getScopedLocaleStorageKey();
-  const raw = safeRead(scopedKey);
+  const raw = safeRead(getScopedLocaleStorageKey());
 
   if (isLocale(raw)) {
     return raw;
   }
 
   const guestRaw = safeRead(GUEST_LOCALE_STORAGE_KEY);
+
   if (isLocale(guestRaw)) {
     return guestRaw;
   }
@@ -93,38 +75,18 @@ export function getStoredLocale(): Locale | null {
 }
 
 export function setStoredLocale(locale: Locale): void {
-  const scopedKey = getScopedLocaleStorageKey();
-
-  safeWrite(scopedKey, locale);
+  safeWrite(getScopedLocaleStorageKey(), locale);
   safeWrite(GUEST_LOCALE_STORAGE_KEY, locale);
 }
 
 export function getBrowserLocale(): Locale | null {
-  if (!isBrowser()) {
-    return null;
-  }
+  if (!isBrowser()) return null;
 
   const browserLocale = window.navigator.language?.split("-")[0]?.toLowerCase();
 
-  if (isLocale(browserLocale)) {
-    return browserLocale;
-  }
-
-  return null;
+  return isLocale(browserLocale) ? browserLocale : null;
 }
 
 export function getCurrentLocale(): Locale {
-  const stored = getStoredLocale();
-
-  if (stored) {
-    return stored;
-  }
-
-  const browserLocale = getBrowserLocale();
-
-  if (browserLocale) {
-    return browserLocale;
-  }
-
-  return defaultLocale;
+  return getStoredLocale() ?? getBrowserLocale() ?? defaultLocale;
 }

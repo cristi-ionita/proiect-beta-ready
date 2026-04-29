@@ -1,4 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
+
+import { cn } from "@/lib/utils";
 
 type EmptyStateProps = {
   title: string;
@@ -8,6 +12,9 @@ type EmptyStateProps = {
   className?: string;
 };
 
+const baseStyles =
+  "rounded-2xl border border-white/10 bg-white/10 p-6 text-center backdrop-blur-md";
+
 export default function EmptyState({
   title,
   description,
@@ -16,11 +23,7 @@ export default function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div
-      className={`rounded-[28px] border border-white/10 bg-white/10 p-6 text-center shadow-[0_20px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl ${
-        className ?? ""
-      }`}
-    >
+    <div className={cn(baseStyles, className)}>
       {icon && (
         <div className="mb-3 flex justify-center text-white">
           {icon}

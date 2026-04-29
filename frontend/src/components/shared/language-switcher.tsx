@@ -6,16 +6,13 @@ import { useEffect, useId, useRef, useState } from "react";
 import { LANGUAGE_OPTIONS } from "@/constants/locales";
 import type { Locale } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n/use-i18n";
+import { cn } from "@/lib/utils";
 
 type LanguageSwitcherProps = {
   className?: string;
   align?: "left" | "right";
   variant?: "light" | "dark";
 };
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 export default function LanguageSwitcher({
   className,
@@ -63,8 +60,8 @@ export default function LanguageSwitcher({
 
   const triggerClasses =
     variant === "dark"
-      ? "inline-flex items-center gap-3 rounded-2xl border border-white/12 bg-white/10 px-4 py-2.5 text-sm font-medium text-slate-100 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/14 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-      : "inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300";
+      ? "inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-medium text-slate-100 backdrop-blur transition hover:border-white/20 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+      : "inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm font-medium text-slate-700 backdrop-blur transition hover:border-slate-300 hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300";
 
   const iconBoxClasses =
     variant === "dark"
@@ -73,8 +70,8 @@ export default function LanguageSwitcher({
 
   const menuClasses =
     variant === "dark"
-      ? "z-50 w-56 origin-top rounded-[24px] border border-white/10 bg-slate-900/95 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl"
-      : "z-50 w-56 origin-top rounded-[24px] border border-slate-200 bg-white/95 p-2 shadow-[0_20px_50px_rgba(15,23,42,0.14)] backdrop-blur";
+      ? "z-50 w-56 origin-top rounded-[24px] border border-white/10 bg-slate-900/95 p-2 backdrop-blur-xl"
+      : "z-50 w-56 origin-top rounded-[24px] border border-slate-200 bg-white/95 p-2 backdrop-blur";
 
   return (
     <div ref={wrapperRef} className={cn("relative", className)}>
@@ -128,10 +125,10 @@ export default function LanguageSwitcher({
                 "flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition",
                 variant === "dark"
                   ? isActive
-                    ? "bg-white text-slate-950 shadow-sm"
+                    ? "bg-white text-slate-950"
                     : "text-slate-200 hover:bg-white/10 hover:text-white"
                   : isActive
-                    ? "bg-slate-900 text-white shadow-sm"
+                    ? "bg-slate-900 text-white"
                     : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
               )}
               role="menuitemradio"
@@ -140,7 +137,7 @@ export default function LanguageSwitcher({
               <div className="flex items-center gap-3">
                 <span
                   className={cn(
-                    "inline-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-semibold",
+                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-semibold",
                     variant === "dark"
                       ? isActive
                         ? "bg-slate-900 text-white"
@@ -154,7 +151,9 @@ export default function LanguageSwitcher({
                 </span>
 
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold">{language.label}</span>
+                  <span className="text-sm font-semibold">
+                    {language.label}
+                  </span>
                   <span
                     className={cn(
                       "text-xs",

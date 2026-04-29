@@ -30,3 +30,8 @@ export async function getMyAccount() {
   const { data } = await api.get("/auth/me");
   return data;
 }
+
+export async function getEmployeeProfile(userId: number) {
+  const { data } = await api.get(`/employee-profiles/${userId}`);
+  return data;
+}

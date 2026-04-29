@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
+
+import AppModal from "@/components/ui/app-modal";
+import Button from "@/components/ui/button";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -27,69 +30,42 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  useEffect(() => {
-    if (!open) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !loading) {
-        onCancel();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, loading, onCancel]);
-
-  if (!open) return null;
+  function handleClose() {
+    if (!loading) onCancel();
+  }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      onClick={!loading ? onCancel : undefined}
-    >
-      <div
-        className="w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.22)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+    <AppModal open={open} onClose={handleClose} title={title}>
+      <div className="space-y-5">
+        {message ? (
+          <p className="whitespace-pre-line text-sm leading-6 text-slate-300">
+            {message}
+          </p>
+        ) : null}
 
-          {message ? (
-            <p className="text-sm leading-6 text-slate-600">{message}</p>
-          ) : null}
+        {children ? <div>{children}</div> : null}
 
-          {children ? <div className="pt-3">{children}</div> : null}
-        </div>
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
+        <div className="flex justify-end gap-2">
+          <Button
             type="button"
-            onClick={onCancel}
+            variant="secondary"
+            onClick={handleClose}
             disabled={loading}
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {cancelText}
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="danger"
             onClick={onConfirm}
             disabled={loading}
-            className="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            loading={loading}
           >
             {loading ? loadingText : confirmText}
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </AppModal>
   );
 }

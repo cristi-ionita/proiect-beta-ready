@@ -21,9 +21,11 @@ import {
   UserRound,
 } from "lucide-react";
 
-import { locales, type Locale } from "@/lib/i18n/dictionaries";
-import { useSafeI18n } from "@/hooks/use-safe-i18n";
+import Alert from "@/components/ui/alert";
 import { useOnboardingGuard } from "@/hooks/use-onboarding-guard";
+import { useSafeI18n } from "@/hooks/use-safe-i18n";
+import { locales, type Locale } from "@/lib/i18n/dictionaries";
+import { cn } from "@/lib/utils";
 
 type Props = {
   pathname: string;
@@ -38,10 +40,6 @@ type NavigationItem = {
   icon: ReactNode;
   requiresOnboarding?: boolean;
 };
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 const languageNames: Record<Locale, string> = {
   ro: "Română",
@@ -113,21 +111,21 @@ export default function UserSidebar({
   useEffect(() => {
     if (!blockedMessage) return;
 
-    const timeout = setTimeout(() => {
+    const timeout = window.setTimeout(() => {
       setBlockedMessage("");
     }, 3500);
 
-    return () => clearTimeout(timeout);
+    return () => window.clearTimeout(timeout);
   }, [blockedMessage]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setLanguageOpen(false);
-        setBlockedMessage("");
+      if (event.key !== "Escape") return;
 
-        if (open) onClose();
-      }
+      setLanguageOpen(false);
+      setBlockedMessage("");
+
+      if (open) onClose();
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -173,8 +171,8 @@ export default function UserSidebar({
   return (
     <>
       {blockedMessage ? (
-        <div className="fixed left-1/2 top-5 z-[80] w-[calc(100%-32px)] max-w-md -translate-x-1/2 rounded-2xl border border-amber-300/40 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 shadow-2xl">
-          {blockedMessage}
+        <div className="fixed left-1/2 top-5 z-[80] w-[calc(100%-32px)] max-w-md -translate-x-1/2">
+          <Alert variant="warning" message={blockedMessage} />
         </div>
       ) : null}
 
@@ -194,8 +192,7 @@ export default function UserSidebar({
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-[150px] transform border-r border-white/10",
           "bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] text-white",
-          "shadow-[0_24px_60px_rgba(0,0,0,0.35)] transition duration-300",
-          "md:static md:translate-x-0",
+          "transition duration-300 md:static md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
         aria-label="User sidebar"
@@ -205,7 +202,7 @@ export default function UserSidebar({
             <button
               type="button"
               onClick={() => setLanguageOpen((current) => !current)}
-              className="flex h-9 w-full items-center justify-center rounded-xl border border-white/12 bg-white/8 shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all duration-200 hover:bg-white/12"
+              className="flex h-9 w-full items-center justify-center rounded-xl border border-white/10 bg-white/10 backdrop-blur-md transition hover:bg-white/15"
               aria-haspopup="menu"
               aria-expanded={languageOpen}
               aria-label="Select language"
@@ -219,7 +216,7 @@ export default function UserSidebar({
             </button>
 
             {languageOpen ? (
-              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-xl">
                 {locales.map((item) => {
                   const isActive = locale === item;
 
@@ -229,7 +226,7 @@ export default function UserSidebar({
                       type="button"
                       onClick={() => handleLanguageSelect(item)}
                       className={cn(
-                        "flex w-full items-center justify-between px-3 py-2.5 text-left text-xs font-medium transition-all duration-200",
+                        "flex w-full items-center justify-between px-3 py-2.5 text-left text-xs font-medium transition",
                         isActive
                           ? "bg-white text-slate-950"
                           : "text-slate-200 hover:bg-white/10 hover:text-white"
@@ -265,17 +262,17 @@ export default function UserSidebar({
                   aria-current={isActive ? "page" : undefined}
                   aria-disabled={isBlocked}
                   className={cn(
-                    "flex w-full flex-col items-center justify-center gap-1.5 rounded-xl p-2.5 transition-all",
+                    "flex w-full flex-col items-center justify-center gap-1.5 rounded-xl p-2.5 transition",
                     isActive
-                      ? "bg-white text-slate-950 shadow-[0_10px_24px_rgba(255,255,255,0.08)]"
+                      ? "bg-white text-slate-950"
                       : "text-slate-300 hover:bg-white/10 hover:text-white",
                     isBlocked &&
-                      "cursor-not-allowed opacity-45 hover:bg-transparent"
+                      "cursor-not-allowed opacity-45 hover:bg-transparent hover:text-slate-300"
                   )}
                 >
                   <span
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-xl transition-all",
+                      "flex h-10 w-10 items-center justify-center rounded-xl transition",
                       isActive
                         ? "bg-slate-950 text-white"
                         : "bg-black/30 text-slate-200"
@@ -302,9 +299,10 @@ export default function UserSidebar({
               type="button"
               onClick={() => {
                 setLanguageOpen(false);
+                onClose();
                 onLogout();
               }}
-              className="flex w-full flex-col items-center gap-1.5 rounded-xl p-2.5 text-slate-300 transition-all hover:bg-white/10 hover:text-white"
+              className="flex w-full flex-col items-center gap-1.5 rounded-xl p-2.5 text-slate-300 transition hover:bg-white/10 hover:text-white"
             >
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white">
                 <LogOut className="h-5 w-5" />

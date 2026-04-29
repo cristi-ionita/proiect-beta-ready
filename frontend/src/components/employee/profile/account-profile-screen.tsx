@@ -2,14 +2,25 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, AtSign, Edit3, Lock, Mail, Save, UserRound, X } from "lucide-react";
+import {
+  ArrowLeft,
+  AtSign,
+  Edit3,
+  Lock,
+  Mail,
+  Save,
+  UserRound,
+  X,
+} from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
+import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import SectionCard from "@/components/ui/section-card";
 import { useProfileSummary } from "@/hooks/profile/use-profile-summary";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
+import { isApiClientError } from "@/lib/api-error";
 import { getMyAccount, updateMyAccount } from "@/services/profile.api";
 
 type AccountFormState = {
@@ -57,10 +68,12 @@ export default function AccountProfileScreen() {
           current_password: "",
           password: "",
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!isMounted) return;
 
-        setSubmitError(err?.message || t("profile", "failedToLoadAccount"));
+        setSubmitError(
+          isApiClientError(err) ? err.message : t("profile", "failedToLoadAccount")
+        );
 
         setForm({
           email: data?.user.email ?? "",
@@ -81,8 +94,8 @@ export default function AccountProfileScreen() {
   }, [data, t]);
 
   function handleChange(field: keyof AccountFormState, value: string) {
-    setForm((prev) => ({
-      ...prev,
+    setForm((current) => ({
+      ...current,
       [field]: value,
     }));
 
@@ -95,17 +108,24 @@ export default function AccountProfileScreen() {
     setSubmitError("");
     setSuccessMessage("");
 
-    setForm((prev) => ({
-      ...prev,
+    setForm((current) => ({
+      ...current,
       current_password: "",
       password: "",
     }));
   }
 
   async function handleSave() {
-    if (editingField === "password" && !form.current_password.trim()) {
-      setSubmitError(t("profile", "currentPasswordRequired"));
-      return;
+    if (editingField === "password") {
+      if (!form.current_password.trim()) {
+        setSubmitError(t("profile", "currentPasswordRequired"));
+        return;
+      }
+
+      if (!form.password.trim()) {
+        setSubmitError(t("profile", "enterNewPassword"));
+        return;
+      }
     }
 
     try {
@@ -116,7 +136,7 @@ export default function AccountProfileScreen() {
       await updateMyAccount({
         email: form.email.trim() || null,
         username: form.username.trim() || null,
-        ...(editingField === "password" && form.password.trim()
+        ...(editingField === "password"
           ? {
               current_password: form.current_password.trim(),
               password: form.password.trim(),
@@ -127,21 +147,15 @@ export default function AccountProfileScreen() {
       setSuccessMessage(t("profile", "accountUpdated"));
       setEditingField(null);
 
-      setForm((prev) => ({
-        ...prev,
+      setForm((current) => ({
+        ...current,
         current_password: "",
         password: "",
       }));
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.message ||
-        err?.response?.data?.detail ||
-        err?.message ||
-        "";
+    } catch (err: unknown) {
+      const message = isApiClientError(err) ? err.message : "";
 
-      if (
-        String(message).toLowerCase().includes("current password is incorrect")
-      ) {
+      if (message.toLowerCase().includes("current password is incorrect")) {
         setSubmitError(t("profile", "incorrectCurrentPassword"));
         return;
       }
@@ -153,130 +167,126 @@ export default function AccountProfileScreen() {
   }
 
   return (
-    <DataStateBoundary
-      isLoading={loading || accountLoading}
-      isError={Boolean(error && !data)}
-      errorMessage={error ?? t("profile", "failedToLoadAccount")}
-      isEmpty={!data}
-      emptyTitle={t("profile", "noAccountData")}
-      emptyDescription={t("profile", "accountDataUnavailable")}
-    >
-      <div className="space-y-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => router.push("/employee/profile")}
-          className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white hover:bg-white/15"
+    <div className="space-y-4">
+      <Button
+        type="button"
+        variant="back"
+        onClick={() => router.push("/employee/profile")}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t("common", "back")}
+      </Button>
+
+      <SectionCard
+        title={t("profile", "loginSettings")}
+        icon={<UserRound className="h-5 w-5" />}
+      >
+        <DataStateBoundary
+          isLoading={loading || accountLoading}
+          isError={Boolean(error && !data)}
+          errorMessage={error ?? t("profile", "failedToLoadAccount")}
+          isEmpty={!data}
+          emptyTitle={t("profile", "noAccountData")}
+          emptyDescription={t("profile", "accountDataUnavailable")}
         >
-          <ArrowLeft className="h-4 w-4" />
-          {t("common", "back")}
-        </Button>
-
-        <SectionCard
-          title={t("profile", "loginSettings")}
-          icon={<UserRound className="h-5 w-5" />}
-        >
-          <div className="space-y-3">
-            <AccountRow
-              icon={<Mail className="h-4 w-4" />}
-              label="Email"
-              isEditing={editingField === "email"}
-              onEdit={() => setEditingField("email")}
-              onCancel={cancelEdit}
-            >
-              {editingField === "email" ? (
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => handleChange("email", event.target.value)}
-                  placeholder="email@example.com"
-                  className="md:max-w-[520px]"
-                />
-              ) : (
-                <p className="truncate text-sm font-semibold text-white">
-                  {form.email || "—"}
-                </p>
-              )}
-            </AccountRow>
-
-            <AccountRow
-              icon={<AtSign className="h-4 w-4" />}
-              label={t("profile", "username")}
-              isEditing={editingField === "username"}
-              onEdit={() => setEditingField("username")}
-              onCancel={cancelEdit}
-            >
-              {editingField === "username" ? (
-                <Input
-                  type="text"
-                  value={form.username}
-                  onChange={(event) =>
-                    handleChange("username", event.target.value)
-                  }
-                  placeholder={t("profile", "enterUsername")}
-                  className="md:max-w-[520px]"
-                />
-              ) : (
-                <p className="truncate text-sm font-semibold text-white">
-                  {form.username || "—"}
-                </p>
-              )}
-            </AccountRow>
-
-            <AccountRow
-              icon={<Lock className="h-4 w-4" />}
-              label={t("profile", "changePassword")}
-              isEditing={editingField === "password"}
-              onEdit={() => setEditingField("password")}
-              onCancel={cancelEdit}
-            >
-              {editingField === "password" ? (
-                <div className="grid gap-3 md:w-full md:max-w-[520px]">
+          <div className="space-y-4">
+            <div className="grid gap-5">
+              <AccountRow
+                icon={<Mail className="h-4 w-4" />}
+                label="Email"
+                isEditing={editingField === "email"}
+                onEdit={() => setEditingField("email")}
+                onCancel={cancelEdit}
+              >
+                {editingField === "email" ? (
                   <Input
-                    type="password"
-                    value={form.current_password}
+                    type="email"
+                    value={form.email}
                     onChange={(event) =>
-                      handleChange("current_password", event.target.value)
+                      handleChange("email", event.target.value)
                     }
-                    placeholder={t("profile", "enterCurrentPassword")}
+                    placeholder="email@example.com"
                   />
+                ) : (
+                  <p className="truncate text-sm font-semibold text-white">
+                    {form.email || "—"}
+                  </p>
+                )}
+              </AccountRow>
 
+              <AccountRow
+                icon={<AtSign className="h-4 w-4" />}
+                label={t("profile", "username")}
+                isEditing={editingField === "username"}
+                onEdit={() => setEditingField("username")}
+                onCancel={cancelEdit}
+              >
+                {editingField === "username" ? (
                   <Input
-                    type="password"
-                    value={form.password}
+                    type="text"
+                    value={form.username}
                     onChange={(event) =>
-                      handleChange("password", event.target.value)
+                      handleChange("username", event.target.value)
                     }
-                    placeholder={t("profile", "enterNewPassword")}
+                    placeholder={t("profile", "enterUsername")}
                   />
-                </div>
-              ) : (
-                <p className="text-sm font-semibold text-slate-300">
-                  {t("profile", "passwordHidden")}
-                </p>
-              )}
-            </AccountRow>
+                ) : (
+                  <p className="truncate text-sm font-semibold text-white">
+                    {form.username || "—"}
+                  </p>
+                )}
+              </AccountRow>
+
+              <AccountRow
+                icon={<Lock className="h-4 w-4" />}
+                label={t("profile", "changePassword")}
+                isEditing={editingField === "password"}
+                onEdit={() => setEditingField("password")}
+                onCancel={cancelEdit}
+              >
+                {editingField === "password" ? (
+                  <div className="grid gap-3">
+                    <Input
+                      type="password"
+                      value={form.current_password}
+                      onChange={(event) =>
+                        handleChange("current_password", event.target.value)
+                      }
+                      placeholder={t("profile", "enterCurrentPassword")}
+                    />
+
+                    <Input
+                      type="password"
+                      value={form.password}
+                      onChange={(event) =>
+                        handleChange("password", event.target.value)
+                      }
+                      placeholder={t("profile", "enterNewPassword")}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-sm font-semibold text-slate-300">
+                    {t("profile", "passwordHidden")}
+                  </p>
+                )}
+              </AccountRow>
+            </div>
 
             {successMessage ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-                {successMessage}
-              </div>
+              <Alert variant="success" message={successMessage} />
             ) : null}
 
             {submitError ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                {submitError}
-              </div>
+              <Alert variant="error" message={submitError} />
             ) : null}
 
             {editingField ? (
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-end">
                 <Button
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
                   loading={saving}
-                  className="rounded-full"
                 >
                   <Save className="h-4 w-4" />
                   {t("common", "save")}
@@ -284,9 +294,9 @@ export default function AccountProfileScreen() {
               </div>
             ) : null}
           </div>
-        </SectionCard>
-      </div>
-    </DataStateBoundary>
+        </DataStateBoundary>
+      </SectionCard>
+    </div>
   );
 }
 
@@ -306,38 +316,24 @@ function AccountRow({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 md:flex-row md:items-center md:justify-between">
+    <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_auto] md:items-center">
       <div className="flex min-w-0 items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/30 text-white">
           {icon}
         </div>
 
-        <p className="w-44 shrink-0 text-sm font-semibold text-white">
-          {label}
-        </p>
+        <p className="truncate text-sm font-semibold text-white">{label}</p>
       </div>
 
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0">{children}</div>
 
-      <div className="flex shrink-0 justify-end">
+      <div className="flex justify-end">
         {isEditing ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={onCancel}
-            className="rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/15"
-          >
+          <Button type="button" size="sm" variant="secondary" onClick={onCancel}>
             <X className="h-4 w-4" />
           </Button>
         ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={onEdit}
-            className="rounded-full"
-          >
+          <Button type="button" size="sm" variant="secondary" onClick={onEdit}>
             <Edit3 className="h-4 w-4" />
             Edit
           </Button>

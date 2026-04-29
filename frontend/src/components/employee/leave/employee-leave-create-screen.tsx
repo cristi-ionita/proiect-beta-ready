@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Send } from "lucide-react";
 
+import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
 import FormField from "@/components/ui/form-field";
 import Input from "@/components/ui/input";
@@ -11,6 +12,7 @@ import SectionCard from "@/components/ui/section-card";
 import Textarea from "@/components/ui/textarea";
 import { ROUTES } from "@/constants/routes";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
+import { isApiClientError } from "@/lib/api-error";
 import { api } from "@/lib/axios";
 
 export default function EmployeeLeaveCreateScreen() {
@@ -52,20 +54,18 @@ export default function EmployeeLeaveCreateScreen() {
       });
 
       setSuccess(t("leave", "requestSentSuccessfully"));
-
       setStartDate("");
       setEndDate("");
       setReason("");
 
-      setTimeout(() => {
+      window.setTimeout(() => {
         router.push(ROUTES.EMPLOYEE.LEAVE);
       }, 1000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err?.response?.data?.message ||
-          err?.response?.data?.detail ||
-          err?.message ||
-          t("leave", "failedToSendRequest")
+        isApiClientError(err)
+          ? err.message
+          : t("leave", "failedToSendRequest")
       );
     } finally {
       setLoading(false);
@@ -76,9 +76,8 @@ export default function EmployeeLeaveCreateScreen() {
     <div className="space-y-4">
       <Button
         type="button"
-        variant="ghost"
+        variant="back"
         onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE)}
-        className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white hover:bg-white/15"
       >
         <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
@@ -89,17 +88,8 @@ export default function EmployeeLeaveCreateScreen() {
         icon={<Send className="h-5 w-5" />}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-              {error}
-            </div>
-          ) : null}
-
-          {success ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-              {success}
-            </div>
-          ) : null}
+          {error ? <Alert variant="error" message={error} /> : null}
+          {success ? <Alert variant="success" message={success} /> : null}
 
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label={t("leave", "startDate")} required>
@@ -108,7 +98,6 @@ export default function EmployeeLeaveCreateScreen() {
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
                 required
-                className="text-white"
               />
             </FormField>
 
@@ -118,7 +107,6 @@ export default function EmployeeLeaveCreateScreen() {
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
                 required
-                className="text-white"
               />
             </FormField>
           </div>
@@ -137,17 +125,11 @@ export default function EmployeeLeaveCreateScreen() {
               type="button"
               variant="secondary"
               onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE)}
-              className="rounded-full"
             >
               {t("common", "cancel")}
             </Button>
 
-            <Button
-              type="submit"
-              disabled={loading}
-              loading={loading}
-              className="min-w-[180px] rounded-full"
-            >
+            <Button type="submit" disabled={loading} loading={loading}>
               <Send className="h-4 w-4" />
               {t("leave", "sendRequest")}
             </Button>

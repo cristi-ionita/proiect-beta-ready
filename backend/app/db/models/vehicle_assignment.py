@@ -66,11 +66,11 @@ class VehicleAssignment(Base):
         index=True,
     )
 
-    shift_number: Mapped[int] = mapped_column(
+    shift_number: Mapped[int | None] = mapped_column(
         Integer,
-        nullable=False,
+        nullable=True,
         index=True,
-    )
+)
 
     status: Mapped[AssignmentStatus] = mapped_column(
         SqlEnum(

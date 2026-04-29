@@ -6,4 +6,6 @@ from app.db.models.vehicle import Vehicle as Vehicle
 from app.db.models.vehicle_assignment import VehicleAssignment as VehicleAssignment
 from app.db.models.vehicle_handover_report import VehicleHandoverReport as VehicleHandoverReport
 from app.db.models.vehicle_issue import VehicleIssue as VehicleIssue
-from app.db.models.registration_request import RegistrationRequest
+from app.db.models.vehicle_photo import VehiclePhoto as VehiclePhoto
+from app.db.models.vehicle_issue_photo import VehicleIssuePhoto as VehicleIssuePhoto
+from app.db.models.registration_request import RegistrationRequest as RegistrationRequest

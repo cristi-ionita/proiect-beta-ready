@@ -36,46 +36,51 @@ export function useAdminUsersData(): UseAdminUsersDataResult {
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+    try {
+      setLoading(true);
+      setError("");
 
-    const [usersRes, leaveRes, assignmentsRes] = await Promise.allSettled([
-      listUsers(),
-      getAllLeaveRequests(),
-      listAssignments(),
-    ]);
+      const [usersRes, leaveRes, assignmentsRes] = await Promise.allSettled([
+        listUsers(),
+        getAllLeaveRequests(),
+        listAssignments(),
+      ]);
 
-    const users =
-      usersRes.status === "fulfilled" && Array.isArray(usersRes.value)
-        ? usersRes.value
-        : [];
+      const users =
+        usersRes.status === "fulfilled" && Array.isArray(usersRes.value)
+          ? usersRes.value
+          : [];
 
-    const leaveRequests =
-      leaveRes.status === "fulfilled" &&
-      Array.isArray(leaveRes.value?.requests)
-        ? leaveRes.value.requests
-        : [];
+      const leaveRequests =
+        leaveRes.status === "fulfilled" &&
+        Array.isArray(leaveRes.value?.requests)
+          ? leaveRes.value.requests
+          : [];
 
-    const assignments =
-      assignmentsRes.status === "fulfilled"
-        ? assignmentsRes.value.assignments ?? []
-        : [];
+      const assignments =
+        assignmentsRes.status === "fulfilled"
+          ? assignmentsRes.value.assignments ?? []
+          : [];
 
-    setData({
-      users,
-      leaveRequests,
-      assignments,
-    });
+      setData({
+        users,
+        leaveRequests,
+        assignments,
+      });
 
-    if (
-      usersRes.status === "rejected" &&
-      leaveRes.status === "rejected" &&
-      assignmentsRes.status === "rejected"
-    ) {
+      if (
+        usersRes.status === "rejected" &&
+        leaveRes.status === "rejected" &&
+        assignmentsRes.status === "rejected"
+      ) {
+        setError("Nu s-au putut încărca datele utilizatorilor.");
+      }
+    } catch {
+      setData(initialData);
       setError("Nu s-au putut încărca datele utilizatorilor.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, []);
 
   useEffect(() => {

@@ -14,12 +14,12 @@ export default function AuthPageShell({
   title,
 }: AuthPageShellProps) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] px-4 py-6">
+    <main className="flex min-h-screen items-center justify-center px-4 py-6">
       <div className="w-full max-w-lg">
         {(icon || title) && (
           <div className="mb-6 flex flex-col items-center justify-center text-center">
             {icon ? (
-              <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-white/10 bg-white/10 text-white shadow-[0_10px_24px_rgba(0,0,0,0.2)] backdrop-blur-md">
+              <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-white/10 bg-white/10 text-white backdrop-blur-md">
                 {icon}
               </div>
             ) : null}

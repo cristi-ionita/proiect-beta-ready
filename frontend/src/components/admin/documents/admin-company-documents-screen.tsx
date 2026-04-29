@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, FileText, User } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
-import SectionCard from "@/components/ui/section-card";
+import ListChip from "@/components/patterns/list-chip";
+import ListRow from "@/components/patterns/list-row";
 import Button from "@/components/ui/button";
-
+import SectionCard from "@/components/ui/section-card";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
-import { useAdminUsersData } from "@/hooks/admin/use-admin-users-data";
 import { useActiveUsersTableData } from "@/hooks/users/use-active-users-table-data";
+import { useAdminUsersData } from "@/hooks/users/use-admin-users-data";
 
 export default function AdminCompanyDocumentsScreen() {
   const router = useRouter();
@@ -29,51 +30,35 @@ export default function AdminCompanyDocumentsScreen() {
     [usersData]
   );
 
+  const fallback = "—";
+
   return (
-    <DataStateBoundary
-      isLoading={loading}
-      isError={Boolean(error)}
-      errorMessage={error ?? t("documents", "failedToLoadUsers")}
-    >
-      <div className="space-y-6">
-        <div className="flex items-center justify-start">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/admin/documents")}
-            className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white backdrop-blur-md hover:bg-white/15"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {t("common", "back")}
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <Button variant="back" onClick={() => router.push("/admin/documents")}>
+        <ArrowLeft className="h-4 w-4" />
+        {t("common", "back")}
+      </Button>
 
-        <SectionCard title={t("nav", "users")}>
-          <DataStateBoundary
-            isEmpty={visibleUsers.length === 0}
-            emptyTitle={t("documents", "noUsersFound")}
-          >
-            <div className="space-y-3">
-              {visibleUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/30">
-                      <User className="h-4 w-4 text-white" />
-                    </div>
-
-                    <div>
-                      <p className="font-semibold text-white">
-                        {user.full_name || `User #${user.id}`}
-                      </p>
-
-                      <p className="text-sm text-slate-400">
-                        {t("common", "shift")}: {user.shift_number || "—"}
-                      </p>
-                    </div>
-                  </div>
-
+      <SectionCard title={t("nav", "users")}>
+        <DataStateBoundary
+          isLoading={loading}
+          isError={Boolean(error)}
+          errorMessage={error ?? t("documents", "failedToLoadUsers")}
+          isEmpty={visibleUsers.length === 0}
+          emptyTitle={t("documents", "noUsersFound")}
+        >
+          <div className="space-y-3">
+            {visibleUsers.map((user) => (
+              <ListRow
+                key={user.id}
+                leading={<User className="h-4 w-4" />}
+                title={user.full_name || `User #${user.id}`}
+                meta={
+                  <ListChip icon={<User className="h-3 w-3" />}>
+                    {t("common", "shift")}: {user.shift_number || fallback}
+                  </ListChip>
+                }
+                actions={
                   <Button
                     size="sm"
                     onClick={() =>
@@ -81,17 +66,16 @@ export default function AdminCompanyDocumentsScreen() {
                         `/admin/documents/company-documents/${user.id}`
                       )
                     }
-                    className="rounded-full"
                   >
                     <FileText className="h-4 w-4" />
                     {t("documents", "uploadDocuments")}
                   </Button>
-                </div>
-              ))}
-            </div>
-          </DataStateBoundary>
-        </SectionCard>
-      </div>
-    </DataStateBoundary>
+                }
+              />
+            ))}
+          </div>
+        </DataStateBoundary>
+      </SectionCard>
+    </div>
   );
 }

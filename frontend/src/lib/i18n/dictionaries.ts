@@ -1,6 +1,10 @@
 export const dictionaries = {
   ro: {
     common: {
+      username: "Username",
+      password: "Parolă",
+      createEmployeeAccount: "Creează cont angajat",
+      createMechanicAccount: "Creează cont mecanic",
       date: "Dată",
       genericError: "A apărut o eroare.",
       back: "Înapoi",
@@ -53,6 +57,22 @@ export const dictionaries = {
       accountDataUnavailable: "Detaliile contului nu sunt disponibile",
     },
     vehicles: {
+      handover: "Preluare vehicul",
+      myVehicle: "Vehiculul meu",
+      createdAt: "Creat la",
+      detailsTitle: "Detalii vehicul",
+      vehiclePhotos: "Poze vehicul",
+      removeFromUse: "Scoate din uz",
+      removingFromUse: "Se scoate...",
+      removeFromUseConfirm:
+        "Sigur vrei să scoți această mașină din uz? Această acțiune va elimina mașina din baza de date.",
+      failedToLoadDetails: "Nu s-au putut încărca detaliile vehiculului.",
+      failedToRemoveFromUse: "Nu s-a putut scoate vehiculul din uz.",
+      invalidVehicleId: "ID vehicul invalid.",
+      noVehiclePhotos: "Nu există poze pentru acest vehicul.",
+      registrationPhotos: "Talon",
+      otherPhotos: "Altele",
+      assignedToShift: "Alocat - tura {shift}",
       currentMileage: "Kilometraj curent",
       exteriorPhotos: "Poze exterior",
       damagePhotos: "Poze daune",
@@ -165,6 +185,10 @@ export const dictionaries = {
       failedToLoadDashboard: "Nu s-a putut încărca dashboard-ul",
     },
     assignments: {
+      createSuccess: "Alocare creată cu succes.",
+      rejected: "Alocări refuzate",
+      noRejected: "Nu există alocări refuzate",
+      rejectedAt: "Refuzată la",
       selectUser: "Selectează utilizator",
       selectVehicle: "Selectează vehicul",
       shiftPlaceholder: "Introdu numărul turei",
@@ -191,10 +215,36 @@ export const dictionaries = {
       releaseVehicleConfirmButton: "Da, eliberează",
     },
     issues: {
+      historyTitle: "Istoric probleme",
+      reportedIssuesEmptyTitle: "Nu ai raportat încă nicio problemă",
+      reportedIssuesEmptyDescription: "Problemele raportate vor apărea aici.",
+      createdAt: "Creată la",
+      issueHintNone: "Fără detalii suplimentare",
+      open: "Deschisă",
+      scheduled: "Programată",
+      inProgress: "În lucru",
+      resolved: "Rezolvată",
+      canceled: "Anulată",
+      serviceCategory: "Service",
+      dashboardCategory: "Bord / martori",
+      otherProblemsCategory: "Alte probleme",
+      addServicePhotos: "Poze service",
+      addDashboardPhotos: "Poze bord / martori",
+      addOtherPhotos: "Poze alte probleme",
+      reportIssue: "Raportează problemă",
+      loadingVehicleData: "Se încarcă datele vehiculului...",
+      noAssignedVehicleReport:
+        "Nu poți raporta o problemă până când nu ai un vehicul alocat.",
+      basicServiceChecks: "Verificări service",
+      basicServiceOptional: "Selectează doar dacă este cazul.",
+      addPhotos: "Adaugă poze",
+      addPhotosDescription: "Poți încărca una sau mai multe imagini.",
+      sendIssue: "Trimite problema",
+      dashboardChecksPlaceholder: "Martori aprinși sau avertizări din bord",
+      otherProblemsPlaceholder: "Descrie problema",
       details: "Detalii problemă",
       vehiclePlate: "Număr mașină",
       reportedBy: "Raportat de",
-      createdAt: "Creat la",
       updatedAt: "Actualizat la",
       serviceInKm: "Service în km",
       brakes: "Frâne",
@@ -212,6 +262,7 @@ export const dictionaries = {
       notFound: "Problema nu a fost găsită.",
     },
     documents: {
+      documentPreview: "Previzualizare document",
       driverLicense: "Permis auto",
       identityDocument: "ID / Pașaport",
       taxNumber: "Steuer Nummer",
@@ -264,6 +315,10 @@ export const dictionaries = {
 
   en: {
     common: {
+      username: "Username",
+      password: "Password",
+      createEmployeeAccount: "Create employee account",
+      createMechanicAccount: "Create mechanic account",
       date: "Date",
       genericError: "An error occurred.",
       back: "Back",
@@ -321,6 +376,22 @@ export const dictionaries = {
       accountDataUnavailable: "Account details are unavailable",
     },
     vehicles: {
+      handover: "Vehicle handover",
+      myVehicle: "My vehicle",
+      createdAt: "Created at",
+      detailsTitle: "Vehicle details",
+      vehiclePhotos: "Vehicle photos",
+      removeFromUse: "Remove from use",
+      removingFromUse: "Removing...",
+      removeFromUseConfirm:
+        "Are you sure you want to remove this vehicle from use? This action will delete the vehicle from the database.",
+      failedToLoadDetails: "Failed to load vehicle details.",
+      failedToRemoveFromUse: "Failed to remove vehicle from use.",
+      invalidVehicleId: "Invalid vehicle ID.",
+      noVehiclePhotos: "There are no photos for this vehicle.",
+      registrationPhotos: "Registration",
+      otherPhotos: "Other",
+      assignedToShift: "Assigned - shift {shift}",
       currentMileage: "Current mileage",
       exteriorPhotos: "Exterior photos",
       damagePhotos: "Damage photos",
@@ -428,6 +499,10 @@ export const dictionaries = {
       failedToLoadDashboard: "Failed to load dashboard",
     },
     assignments: {
+      createSuccess: "Assignment created successfully.",
+      rejected: "Rejected assignments",
+      noRejected: "No rejected assignments",
+      rejectedAt: "Rejected at",
       selectUser: "Select user",
       selectVehicle: "Select vehicle",
       shiftPlaceholder: "Enter shift number",
@@ -455,10 +530,36 @@ export const dictionaries = {
       releaseVehicleConfirmButton: "Yes, release",
     },
     issues: {
+      historyTitle: "Issue history",
+      reportedIssuesEmptyTitle: "You have not reported any issues yet",
+      reportedIssuesEmptyDescription: "Reported issues will appear here.",
+      createdAt: "Created at",
+      issueHintNone: "No additional details",
+      open: "Open",
+      scheduled: "Scheduled",
+      inProgress: "In progress",
+      resolved: "Resolved",
+      canceled: "Canceled",
+      serviceCategory: "Service",
+      dashboardCategory: "Dashboard / warnings",
+      otherProblemsCategory: "Other problems",
+      addServicePhotos: "Service photos",
+      addDashboardPhotos: "Dashboard / warning photos",
+      addOtherPhotos: "Other problem photos",
+      reportIssue: "Report issue",
+      loadingVehicleData: "Loading vehicle data...",
+      noAssignedVehicleReport:
+        "You cannot report an issue until you have an assigned vehicle.",
+      basicServiceChecks: "Service checks",
+      basicServiceOptional: "Select only if applicable.",
+      addPhotos: "Add photos",
+      addPhotosDescription: "You can upload one or more images.",
+      sendIssue: "Submit issue",
+      dashboardChecksPlaceholder: "Dashboard warnings or alerts",
+      otherProblemsPlaceholder: "Describe the issue",
       details: "Issue details",
       vehiclePlate: "Vehicle plate",
       reportedBy: "Reported by",
-      createdAt: "Created at",
       updatedAt: "Updated at",
       serviceInKm: "Service in km",
       brakes: "Brakes",
@@ -476,6 +577,7 @@ export const dictionaries = {
       notFound: "Issue not found.",
     },
     documents: {
+      documentPreview: "Document preview",
       driverLicense: "Driver license",
       identityDocument: "ID / Passport",
       taxNumber: "Tax number",
@@ -528,6 +630,10 @@ export const dictionaries = {
 
   de: {
     common: {
+      username: "Benutzername",
+      password: "Passwort",
+      createEmployeeAccount: "Mitarbeiterkonto erstellen",
+      createMechanicAccount: "Mechanikerkonto erstellen",
       date: "Datum",
       genericError: "Ein Fehler ist aufgetreten.",
       back: "Zurück",
@@ -599,6 +705,22 @@ export const dictionaries = {
       accountDataUnavailable: "Kontodetails sind nicht verfügbar",
     },
     vehicles: {
+      handover: "Fahrzeugübernahme",
+      myVehicle: "Mein Fahrzeug",
+      createdAt: "Erstellt am",
+      detailsTitle: "Fahrzeugdetails",
+      vehiclePhotos: "Fahrzeugfotos",
+      removeFromUse: "Außer Betrieb nehmen",
+      removingFromUse: "Wird entfernt...",
+      removeFromUseConfirm:
+        "Möchtest du dieses Fahrzeug wirklich außer Betrieb nehmen? Diese Aktion entfernt das Fahrzeug aus der Datenbank.",
+      failedToLoadDetails: "Fahrzeugdetails konnten nicht geladen werden.",
+      failedToRemoveFromUse: "Fahrzeug konnte nicht außer Betrieb genommen werden.",
+      invalidVehicleId: "Ungültige Fahrzeug-ID.",
+      noVehiclePhotos: "Für dieses Fahrzeug gibt es keine Fotos.",
+      registrationPhotos: "Zulassung",
+      otherPhotos: "Andere",
+      assignedToShift: "Zugewiesen - Schicht {shift}",
       currentMileage: "Aktueller Kilometerstand",
       exteriorPhotos: "Außenfotos",
       damagePhotos: "Schadensfotos",
@@ -692,6 +814,10 @@ export const dictionaries = {
       noApprovedLeaves: "Keine genehmigten Urlaube.",
     },
     assignments: {
+      createSuccess: "Zuweisung erfolgreich erstellt.",
+      rejected: "Abgelehnte Zuweisungen",
+      noRejected: "Keine abgelehnten Zuweisungen",
+      rejectedAt: "Abgelehnt am",
       selectUser: "Benutzer auswählen",
       selectVehicle: "Fahrzeug auswählen",
       shiftPlaceholder: "Schichtnummer eingeben",
@@ -719,10 +845,36 @@ export const dictionaries = {
       releaseVehicleConfirmButton: "Ja, freigeben",
     },
     issues: {
+      historyTitle: "Problemverlauf",
+      reportedIssuesEmptyTitle: "Du hast noch keine Probleme gemeldet",
+      reportedIssuesEmptyDescription: "Gemeldete Probleme werden hier angezeigt.",
+      createdAt: "Erstellt am",
+      issueHintNone: "Keine weiteren Details",
+      open: "Offen",
+      scheduled: "Geplant",
+      inProgress: "In Bearbeitung",
+      resolved: "Gelöst",
+      canceled: "Abgebrochen",
+      serviceCategory: "Service",
+      dashboardCategory: "Cockpit / Warnungen",
+      otherProblemsCategory: "Andere Probleme",
+      addServicePhotos: "Servicefotos",
+      addDashboardPhotos: "Cockpit-/Warnfotos",
+      addOtherPhotos: "Fotos anderer Probleme",
+      reportIssue: "Problem melden",
+      loadingVehicleData: "Fahrzeugdaten werden geladen...",
+      noAssignedVehicleReport:
+        "Du kannst kein Problem melden, solange dir kein Fahrzeug zugewiesen ist.",
+      basicServiceChecks: "Serviceprüfungen",
+      basicServiceOptional: "Nur auswählen, wenn zutreffend.",
+      addPhotos: "Fotos hinzufügen",
+      addPhotosDescription: "Du kannst ein oder mehrere Bilder hochladen.",
+      sendIssue: "Problem senden",
+      dashboardChecksPlaceholder: "Warnleuchten oder Meldungen im Cockpit",
+      otherProblemsPlaceholder: "Problem beschreiben",
       details: "Problemdetails",
       vehiclePlate: "Kennzeichen",
       reportedBy: "Gemeldet von",
-      createdAt: "Erstellt am",
       updatedAt: "Aktualisiert am",
       serviceInKm: "Service in km",
       brakes: "Bremsen",
@@ -740,6 +892,7 @@ export const dictionaries = {
       notFound: "Problem nicht gefunden.",
     },
     documents: {
+      documentPreview: "Dokumentvorschau",
       driverLicense: "Führerschein",
       identityDocument: "Ausweis / Reisepass",
       taxNumber: "Steuernummer",
@@ -789,12 +942,12 @@ export const dictionaries = {
       confirmDeleteDocument: "Möchtest du dieses Dokument wirklich löschen?",
     },
   },
-} as const;
+} as const satisfies Record<string, Record<string, Record<string, string>>>;
 
 export type Locale = keyof typeof dictionaries;
 
 export const defaultLocale: Locale = "de";
-export const locales: Locale[] = ["ro", "en", "de"];
+export const locales = ["ro", "en", "de"] as const satisfies readonly Locale[];
 
 type Dictionary = typeof dictionaries.ro;
 
@@ -807,9 +960,8 @@ export function getTranslation<
   N extends TranslationNamespace,
   K extends TranslationKey<N>
 >(locale: Locale, namespace: N, key: K): string {
-  const currentDictionary = dictionaries[locale] as unknown as FlatDictionary;
-  const fallbackDictionary =
-    dictionaries[defaultLocale] as unknown as FlatDictionary;
+  const currentDictionary = dictionaries[locale] as FlatDictionary;
+  const fallbackDictionary = dictionaries[defaultLocale] as FlatDictionary;
 
   const namespaceName = String(namespace);
   const keyName = String(key);

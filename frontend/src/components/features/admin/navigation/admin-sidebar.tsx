@@ -16,9 +16,9 @@ import {
   Users,
 } from "lucide-react";
 
+import { useSafeI18n } from "@/hooks/use-safe-i18n";
 import { locales, type Locale } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
-import { useSafeI18n } from "@/hooks/use-safe-i18n";
 
 type Props = {
   pathname: string;
@@ -147,35 +147,6 @@ export default function AdminSidebar({
       return false;
     }
 
-    if (itemHref === "/admin/vehicles") {
-      return (
-        pathname === "/admin/vehicles" ||
-        pathname === "/admin/vehicles/list" ||
-        pathname === "/admin/vehicles/create" ||
-        pathname === "/admin/vehicles/assign" ||
-        pathname === "/admin/vehicles/live-status" ||
-        pathname === "/admin/vehicles/unassigned"
-      );
-    }
-
-    if (itemHref === "/admin/assignments") {
-      return (
-        pathname === "/admin/assignments" ||
-        pathname === "/admin/assignments/create" ||
-        pathname === "/admin/assignments/list" ||
-        pathname === "/admin/assignments/history"
-      );
-    }
-
-    if (itemHref === "/admin/leave") {
-      return (
-        pathname === "/admin/leave" ||
-        pathname === "/admin/leave/all-leaves" ||
-        pathname === "/admin/leave/approvals" ||
-        pathname === "/admin/leave/today"
-      );
-    }
-
     return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
   }
 
@@ -197,8 +168,7 @@ export default function AdminSidebar({
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-[150px] transform border-r border-white/10",
           "bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] text-white",
-          "shadow-[0_24px_60px_rgba(0,0,0,0.35)] transition duration-300",
-          "md:static md:translate-x-0",
+          "transition duration-300 md:static md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
         aria-label="Admin sidebar"
@@ -208,7 +178,7 @@ export default function AdminSidebar({
             <button
               type="button"
               onClick={() => setLanguageOpen((current) => !current)}
-              className="flex h-9 w-full items-center justify-center rounded-xl border border-white/12 bg-white/8 shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all duration-200 hover:bg-white/12"
+              className="flex h-9 w-full items-center justify-center rounded-xl border border-white/10 bg-white/10 backdrop-blur-md transition hover:bg-white/15"
               aria-haspopup="menu"
               aria-expanded={languageOpen}
               aria-label="Select language"
@@ -222,7 +192,7 @@ export default function AdminSidebar({
             </button>
 
             {languageOpen ? (
-              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-xl">
                 {locales.map((item: Locale) => {
                   const isActive = locale === item;
 
@@ -232,7 +202,7 @@ export default function AdminSidebar({
                       type="button"
                       onClick={() => handleLanguageSelect(item)}
                       className={cn(
-                        "flex w-full items-center justify-between px-3 py-2.5 text-left text-xs font-medium transition-all duration-200",
+                        "flex w-full items-center justify-between px-3 py-2.5 text-left text-xs font-medium transition",
                         isActive
                           ? "bg-white text-slate-950"
                           : "text-slate-200 hover:bg-white/10 hover:text-white"
@@ -267,21 +237,21 @@ export default function AdminSidebar({
                   }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "relative flex w-full flex-col items-center justify-center gap-1.5 rounded-xl p-2.5 transition-all",
+                    "relative flex w-full flex-col items-center justify-center gap-1.5 rounded-xl p-2.5 transition",
                     isActive
-                      ? "bg-white text-slate-950 shadow-[0_10px_24px_rgba(255,255,255,0.08)]"
+                      ? "bg-white text-slate-950"
                       : "text-slate-300 hover:bg-white/10 hover:text-white"
                   )}
                 >
                   {item.badge ? (
-                    <span className="absolute right-2 top-2 min-w-[20px] rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
+                    <span className="absolute right-2 top-2 min-w-[20px] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
                       {item.badge}
                     </span>
                   ) : null}
 
                   <span
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-xl transition-all",
+                      "flex h-10 w-10 items-center justify-center rounded-xl transition",
                       isActive
                         ? "bg-slate-950 text-white"
                         : "bg-black/30 text-slate-200"
@@ -311,7 +281,7 @@ export default function AdminSidebar({
                 onClose();
                 onLogout();
               }}
-              className="flex w-full flex-col items-center gap-1.5 rounded-xl p-2.5 text-slate-300 transition-all hover:bg-white/10 hover:text-white"
+              className="flex w-full flex-col items-center gap-1.5 rounded-xl p-2.5 text-slate-300 transition hover:bg-white/10 hover:text-white"
             >
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white">
                 <LogOut className="h-5 w-5" />

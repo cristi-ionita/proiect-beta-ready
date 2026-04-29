@@ -5,10 +5,15 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarDays } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
+import ListChip from "@/components/patterns/list-chip";
+import ListRow from "@/components/patterns/list-row";
 import Button from "@/components/ui/button";
+import SectionCard from "@/components/ui/section-card";
 import StatusBadge from "@/components/ui/status-badge";
 import { ROUTES } from "@/constants/routes";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
+import { isApiClientError } from "@/lib/api-error";
+import { formatDate } from "@/lib/utils";
 import { api } from "@/lib/axios";
 
 type LeaveRequestStatus = "pending" | "approved" | "rejected" | "canceled";
@@ -31,23 +36,11 @@ type LeaveRequestListResponse = {
   requests: LeaveRequestItem[];
 };
 
-function formatDate(value?: string | null) {
-  if (!value) return "—";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-
-  return new Intl.DateTimeFormat("ro-RO", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(parsed);
-}
-
 function getStatusVariant(status: LeaveRequestStatus) {
   if (status === "approved") return "success";
   if (status === "rejected") return "danger";
   if (status === "canceled") return "neutral";
+
   return "warning";
 }
 
@@ -55,12 +48,13 @@ function getStatusLabel(status: LeaveRequestStatus) {
   if (status === "approved") return "Aprobată";
   if (status === "rejected") return "Respinsă";
   if (status === "canceled") return "Anulată";
+
   return "În așteptare";
 }
 
 export default function EmployeeLeaveHistoryScreen() {
   const router = useRouter();
-  const { t } = useSafeI18n();
+  const { t, localeTag } = useSafeI18n();
 
   const [data, setData] = useState<LeaveRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,16 +65,16 @@ export default function EmployeeLeaveHistoryScreen() {
       setLoading(true);
       setError("");
 
-      const response =
-        await api.get<LeaveRequestListResponse>("/leave-requests/me");
+      const response = await api.get<LeaveRequestListResponse>(
+        "/leave-requests/me"
+      );
 
-      setData(Array.isArray(response.data?.requests) ? response.data.requests : []);
-    } catch (err: any) {
+      setData(
+        Array.isArray(response.data?.requests) ? response.data.requests : []
+      );
+    } catch (err: unknown) {
       setError(
-        err?.response?.data?.message ||
-          err?.response?.data?.detail ||
-          err?.message ||
-          "Nu am putut încărca cererile de concediu."
+        isApiClientError(err) ? err.message : t("leave", "failedToLoadRecords")
       );
       setData([]);
     } finally {
@@ -93,58 +87,60 @@ export default function EmployeeLeaveHistoryScreen() {
   }, []);
 
   return (
-    <DataStateBoundary
-      isLoading={loading}
-      isError={Boolean(error)}
-      errorMessage={error}
-      isEmpty={data.length === 0}
-      emptyTitle="Nu ai încă cereri de concediu"
-      emptyDescription="Când trimiți o cerere de concediu, o vei vedea aici."
-    >
-      <div className="space-y-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE)}
-          className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white hover:bg-white/15"
+    <div className="space-y-4">
+      <Button
+        type="button"
+        variant="back"
+        onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE)}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t("common", "back")}
+      </Button>
+
+      <SectionCard title={t("leave", "approvedLeaves")}>
+        <DataStateBoundary
+          isLoading={loading}
+          isError={Boolean(error)}
+          errorMessage={error}
+          isEmpty={data.length === 0}
+          emptyTitle={t("leave", "noPendingRequests")}
+          emptyDescription={t("leave", "submitLeaveRequest")}
         >
-          <ArrowLeft className="h-4 w-4" />
-          {t("common", "back")}
-        </Button>
-
-        <div className="overflow-hidden rounded-[26px] border border-white/10 bg-white/10 backdrop-blur-md">
-          <div className="divide-y divide-white/10">
+          <div className="space-y-2.5">
             {data.map((request) => (
-              <div
+              <ListRow
                 key={request.id}
-                className="flex flex-col gap-3 px-4 py-3 hover:bg-white/5 md:flex-row md:items-center md:justify-between"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/30 text-white">
-                    <CalendarDays className="h-4 w-4" />
-                  </div>
+                leading={<CalendarDays className="h-4 w-4" />}
+                title={`${formatDate(request.start_date, localeTag)} → ${formatDate(
+                  request.end_date,
+                  localeTag
+                )}`}
+                subtitle={request.reason || undefined}
+                badge={
+                  <StatusBadge
+                    label={getStatusLabel(request.status)}
+                    variant={getStatusVariant(request.status)}
+                  />
+                }
+                meta={
+                  <>
+                    <ListChip icon={<CalendarDays className="h-3 w-3" />}>
+                      {t("issues", "createdAt")}:{" "}
+                      {formatDate(request.created_at, localeTag)}
+                    </ListChip>
 
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white">
-                      {formatDate(request.start_date)} -{" "}
-                      {formatDate(request.end_date)}
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-400">
-                      Creată la {formatDate(request.created_at)}
-                    </p>
-                  </div>
-                </div>
-
-                <StatusBadge
-                  label={getStatusLabel(request.status)}
-                  variant={getStatusVariant(request.status)}
-                />
-              </div>
+                    {request.rejection_reason ? (
+                      <ListChip variant="rose">
+                        Motiv respingere: {request.rejection_reason}
+                      </ListChip>
+                    ) : null}
+                  </>
+                }
+              />
             ))}
           </div>
-        </div>
-      </div>
-    </DataStateBoundary>
+        </DataStateBoundary>
+      </SectionCard>
+    </div>
   );
 }

@@ -4,6 +4,10 @@ import Link from "next/link";
 import type { FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
+import Alert from "@/components/ui/alert";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
+
 type LoginRole = "admin" | "employee" | "mechanic";
 
 type LoginFormText = {
@@ -53,103 +57,93 @@ export default function LoginForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mx-auto max-w-sm rounded-[26px] border border-white/10 bg-gradient-to-b from-white to-slate-50 p-5 shadow-[0_20px_56px_rgba(0,0,0,0.24)] backdrop-blur-xl"
+      className="mx-auto max-w-sm rounded-[26px] border border-white/10 bg-white/10 p-5 backdrop-blur-md"
     >
       <div className="mb-5 flex items-center justify-end">
-        <button
+        <Button
           type="button"
+          variant="back"
+          size="sm"
           onClick={handleBack}
           disabled={loading}
-          className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,0.25)] transition-all duration-200 hover:bg-slate-800 hover:shadow-[0_10px_24px_rgba(0,0,0,0.35)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {text.back}
-        </button>
+        </Button>
       </div>
 
-      <div className="mb-3">
-        <input
+      <div className="space-y-3">
+        <Input
           type="text"
           value={identifier}
           onChange={(event) => setIdentifier(event.target.value)}
           placeholder={text.username}
           autoComplete="username"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all duration-200 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-        />
-      </div>
-
-      <div className="relative mb-3">
-        <input
-          type={showSecret ? "text" : "password"}
-          value={secret}
-          onChange={(event) => setSecret(event.target.value)}
-          placeholder={text.password}
-          autoComplete="current-password"
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 outline-none transition-all duration-200 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
         />
 
-        <button
-          type="button"
-          onClick={toggleShowSecret}
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-900 active:scale-95"
-          aria-label={text.toggleSecret}
-        >
-          {showSecret ? (
-            <EyeOff className="h-[18px] w-[18px]" />
-          ) : (
-            <Eye className="h-[18px] w-[18px]" />
-          )}
-        </button>
+        <div className="relative">
+          <Input
+            type={showSecret ? "text" : "password"}
+            value={secret}
+            onChange={(event) => setSecret(event.target.value)}
+            placeholder={text.password}
+            autoComplete="current-password"
+            className="pr-12"
+          />
+
+          <button
+            type="button"
+            onClick={toggleShowSecret}
+            aria-label={text.toggleSecret}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-white"
+          >
+            {showSecret ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </div>
 
-      {role === "employee" ? (
-        <div className="mb-4 flex items-center justify-between gap-3">
+      {role !== "admin" && (
+        <div className="mt-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
           <Link
             href="/auth/forgot-password"
-            className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+            className="text-slate-300 hover:text-white"
           >
             {text.forgotPassword}
           </Link>
 
-          <Link
-            href="/register/employee"
-            className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
-          >
-            {text.createEmployeeAccount}
-          </Link>
-        </div>
-      ) : null}
+          {role === "employee" && (
+            <Link
+              href="/register/employee"
+              className="text-slate-300 hover:text-white"
+            >
+              {text.createEmployeeAccount}
+            </Link>
+          )}
 
-      {role === "mechanic" ? (
-        <div className="mb-4 flex items-center justify-end">
-          <Link
-            href="/register/mechanic"
-            className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
-          >
-            {text.createMechanicAccount}
-          </Link>
+          {role === "mechanic" && (
+            <Link
+              href="/register/mechanic"
+              className="text-slate-300 hover:text-white"
+            >
+              {text.createMechanicAccount}
+            </Link>
+          )}
         </div>
-      ) : null}
+      )}
 
-      {error ? (
-        <div
-          className="mb-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
-          role="alert"
-          aria-live="polite"
-        >
-          {error}
-        </div>
-      ) : null}
+      {error ? <Alert className="mt-4" variant="error" message={error} /> : null}
 
-      <button
+      <Button
         type="submit"
+        className="mt-4 w-full"
         disabled={loading || !normalizedIdentifier || !normalizedSecret}
-        className="w-full rounded-2xl bg-black py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+        loading={loading}
       >
-        {loading ? "..." : text.login}
-      </button>
+        {text.login}
+      </Button>
     </form>
   );
 }

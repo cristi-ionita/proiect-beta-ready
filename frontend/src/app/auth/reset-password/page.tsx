@@ -1,8 +1,14 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, KeyRound, Save } from "lucide-react";
 
+import AuthPageShell from "@/components/auth/auth-page-shell";
+import PasswordField from "@/components/auth/PasswordField";
+import Alert from "@/components/ui/alert";
+import Button from "@/components/ui/button";
 import { resetPassword } from "@/services/auth.api";
 
 function ResetPasswordContent() {
@@ -12,15 +18,26 @@ function ResetPasswordContent() {
   const token = searchParams.get("token") ?? "";
 
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const normalizedPassword = password.trim();
 
     if (!token) {
       setError("Reset token is missing.");
+      setSuccess("");
+      return;
+    }
+
+    if (normalizedPassword.length < 8) {
+      setError("Password must have at least 8 characters.");
+      setSuccess("");
       return;
     }
 
@@ -29,10 +46,11 @@ function ResetPasswordContent() {
       setError("");
       setSuccess("");
 
-      const response = await resetPassword(token, password);
+      const response = await resetPassword(token, normalizedPassword);
       setSuccess(response.message);
+      setPassword("");
 
-      setTimeout(() => {
+      window.setTimeout(() => {
         router.push("/");
       }, 2000);
     } catch {
@@ -43,45 +61,56 @@ function ResetPasswordContent() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] px-4 py-8">
+    <AuthPageShell icon={<KeyRound className="h-7 w-7" />} title="Reset password">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-[26px] border border-white/10 bg-gradient-to-b from-white to-slate-50 p-5 shadow-[0_20px_56px_rgba(0,0,0,0.24)]"
+        className="w-full max-w-[640px] rounded-[26px] border border-white/10 bg-white/10 p-5 backdrop-blur-md"
       >
-        <h1 className="mb-5 text-center text-2xl font-semibold text-slate-900">
-          Reset password
-        </h1>
+        <p className="mb-5 text-center text-sm leading-6 text-slate-300">
+          Enter your new password. It must have at least 8 characters.
+        </p>
 
-        <input
-          type="password"
-          placeholder="New password"
+        <PasswordField
+          label="New password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="new-password"
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all duration-200 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+          onChange={(value) => {
+            setPassword(value);
+
+            if (error) setError("");
+            if (success) setSuccess("");
+          }}
+          show={showPassword}
+          onToggle={() => setShowPassword((prev) => !prev)}
+          placeholder="New password"
         />
 
         {error ? (
-          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-            {error}
-          </div>
+          <Alert className="mt-4" variant="error" message={error} />
         ) : null}
 
         {success ? (
-          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-            {success}
-          </div>
+          <Alert className="mt-4" variant="success" message={success} />
         ) : null}
 
-        <button
-          type="submit"
-          disabled={loading || password.trim().length < 8}
-          className="mt-4 w-full rounded-2xl bg-black py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Resetting..." : "Reset password"}
-        </button>
+        <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link href="/">
+            <Button type="button" variant="secondary">
+              <ArrowLeft className="h-4 w-4" />
+              Back to login
+            </Button>
+          </Link>
+
+          <Button
+            type="submit"
+            loading={loading}
+            disabled={loading || password.trim().length < 8}
+          >
+            <Save className="h-4 w-4" />
+            {loading ? "Resetting..." : "Reset password"}
+          </Button>
+        </div>
       </form>
-    </main>
+    </AuthPageShell>
   );
 }
 

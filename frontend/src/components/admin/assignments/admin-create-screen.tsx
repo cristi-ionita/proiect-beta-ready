@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, ClipboardList } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
+import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
 import FormField from "@/components/ui/form-field";
 import SectionCard from "@/components/ui/section-card";
 import Select from "@/components/ui/select";
-
 import { useAdminAssignments } from "@/hooks/admin/use-admin-assignments";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
 
@@ -17,18 +18,13 @@ export default function AdminCreateAssignmentScreen() {
   const router = useRouter();
   const { t } = useSafeI18n();
 
+  const fallback = "—";
   const loadErrorMessage = t("assignments", "failedToLoad");
 
-  const {
-    users,
-    vehicles,
-    createAssignmentAction,
-    loading,
-    saving,
-    error,
-  } = useAdminAssignments({
-    errorMessage: loadErrorMessage,
-  });
+  const { users, vehicles, createAssignmentAction, loading, saving, error } =
+    useAdminAssignments({
+      errorMessage: loadErrorMessage,
+    });
 
   const [userId, setUserId] = useState("");
   const [vehicleId, setVehicleId] = useState("");
@@ -43,15 +39,13 @@ export default function AdminCreateAssignmentScreen() {
     ? Number(selectedUser.shift_number)
     : 0;
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const parsedUserId = Number(userId);
     const parsedVehicleId = Number(vehicleId);
 
-    if (!parsedUserId || !parsedVehicleId || !selectedUserShift) {
-      return;
-    }
+    if (!parsedUserId || !parsedVehicleId || !selectedUserShift) return;
 
     setSuccessMessage("");
 
@@ -63,37 +57,35 @@ export default function AdminCreateAssignmentScreen() {
 
     setUserId("");
     setVehicleId("");
-    setSuccessMessage("Alocare creată cu succes.");
+    setSuccessMessage(t("assignments", "createSuccess"));
   }
 
   return (
-    <DataStateBoundary
-      isLoading={loading}
-      isError={Boolean(error)}
-      errorMessage={error ?? loadErrorMessage}
-    >
-      <div className="space-y-6">
-        <div className="flex items-center justify-start">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/admin/assignments")}
-            className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white shadow-[0_10px_30px_rgba(0,0,0,0.16)] hover:bg-white/15"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {t("common", "back")}
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <Button
+        variant="back"
+        onClick={() => router.push("/admin/assignments")}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t("common", "back")}
+      </Button>
 
-        {successMessage ? (
-          <div className="flex items-center gap-2 rounded-2xl border border-emerald-300/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">
-            <CheckCircle2 className="h-4 w-4" />
-            {successMessage}
-          </div>
-        ) : null}
+      {successMessage ? (
+        <Alert
+          variant="success"
+          message={successMessage}
+          className="max-w-2xl"
+        />
+      ) : null}
 
-        <SectionCard
-          title={t("assignments", "create")}
-          icon={<ClipboardList className="h-5 w-5" />}
+      <SectionCard
+        title={t("assignments", "create")}
+        icon={<ClipboardList className="h-5 w-5" />}
+      >
+        <DataStateBoundary
+          isLoading={loading}
+          isError={Boolean(error)}
+          errorMessage={error ?? loadErrorMessage}
         >
           <form onSubmit={handleSubmit} className="space-y-5">
             <FormField label={t("documents", "user")} required>
@@ -108,22 +100,20 @@ export default function AdminCreateAssignmentScreen() {
 
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
-                    {user.full_name}
-                    {user.shift_number
-                      ? ` — ${t("common", "shift")}: ${user.shift_number}`
-                      : ` — ${t("common", "shift")}: —`}
+                    {user.full_name} — {t("common", "shift")}:{" "}
+                    {user.shift_number || fallback}
                   </option>
                 ))}
               </Select>
             </FormField>
 
             {selectedUser ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200">
-                {t("common", "shift")}:{" "}
-                <span className="font-semibold text-white">
-                  {selectedUser.shift_number || "—"}
-                </span>
-              </div>
+              <Alert
+                variant={selectedUserShift ? "info" : "warning"}
+                message={`${t("common", "shift")}: ${
+                  selectedUser.shift_number || fallback
+                }`}
+              />
             ) : null}
 
             <FormField label={t("common", "vehicle")} required>
@@ -151,12 +141,13 @@ export default function AdminCreateAssignmentScreen() {
                 disabled={saving || !userId || !vehicleId || !selectedUserShift}
                 loading={saving}
               >
+                <CheckCircle2 className="h-4 w-4" />
                 {t("assignments", "createButton")}
               </Button>
             </div>
           </form>
-        </SectionCard>
-      </div>
-    </DataStateBoundary>
+        </DataStateBoundary>
+      </SectionCard>
+    </div>
   );
 }

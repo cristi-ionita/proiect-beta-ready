@@ -2,14 +2,18 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, FileText, Upload, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, FileText, Upload } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
+import ListChip from "@/components/patterns/list-chip";
+import ListRow from "@/components/patterns/list-row";
+import AppModal from "@/components/ui/app-modal";
 import Button from "@/components/ui/button";
 import SectionCard from "@/components/ui/section-card";
 import { ROUTES } from "@/constants/routes";
 import { useMyDocuments } from "@/hooks/documents/use-my-documents";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
+import { formatDate } from "@/lib/utils";
 import {
   deleteMyDocument,
   myDownloadDocumentFile,
@@ -18,11 +22,7 @@ import {
 
 type UniqueDocumentSlot = {
   key: string;
-  labelKey:
-    | "driverLicense"
-    | "identityDocument"
-    | "taxNumber"
-    | "bankCard";
+  labelKey: "driverLicense" | "identityDocument" | "taxNumber" | "bankCard";
   types: string[];
   uploadType: string;
 };
@@ -54,26 +54,15 @@ const UNIQUE_DOCUMENT_SLOTS: UniqueDocumentSlot[] = [
   },
 ];
 
-function formatDate(value?: string | null) {
-  if (!value) return "—";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("ro-RO", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
 export default function MyDocumentsListScreen() {
   const router = useRouter();
-  const { t } = useSafeI18n();
+  const { t, localeTag } = useSafeI18n();
   const fileInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
 
   const { data, loading, error, refetch } = useMyDocuments();
 
-  const [preview, setPreview] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState("");
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   const documents = Array.isArray(data) ? data : [];
@@ -91,19 +80,25 @@ export default function MyDocumentsListScreen() {
     );
   }
 
-  async function handlePreview(documentId: number) {
+  async function handlePreview(documentId: number, fileName?: string | null) {
     const blob = await myDownloadDocumentFile(documentId);
     const url = URL.createObjectURL(blob);
 
-    setPreview(url);
+    setPreviewUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return url;
+    });
+
+    setPreviewName(fileName || "document");
   }
 
   function closePreview() {
-    if (preview) {
-      URL.revokeObjectURL(preview);
-    }
+    setPreviewUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
 
-    setPreview(null);
+    setPreviewName("");
   }
 
   async function handleUniqueUpload(
@@ -131,9 +126,7 @@ export default function MyDocumentsListScreen() {
       setUploadingKey(null);
 
       const input = fileInputsRef.current[slot.key];
-      if (input) {
-        input.value = "";
-      }
+      if (input) input.value = "";
     }
   }
 
@@ -153,107 +146,98 @@ export default function MyDocumentsListScreen() {
       setUploadingKey(null);
 
       const input = fileInputsRef.current.medical_certificate;
-      if (input) {
-        input.value = "";
-      }
+      if (input) input.value = "";
     }
   }
 
   return (
-    <DataStateBoundary
-      isLoading={loading}
-      isError={Boolean(error)}
-      errorMessage={error ?? t("documents", "failedToLoadDocuments")}
-    >
-      <div className="space-y-4">
-        <Button
-          variant="ghost"
-          onClick={() => router.push(ROUTES.EMPLOYEE.DOCUMENTS)}
-          className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t("common", "back")}
-        </Button>
+    <div className="space-y-4">
+      <Button
+        variant="back"
+        onClick={() => router.push(ROUTES.EMPLOYEE.DOCUMENTS)}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t("common", "back")}
+      </Button>
 
-        <div className="overflow-hidden rounded-[26px] border border-white/10 bg-white/10 backdrop-blur-md">
-          <div className="divide-y divide-white/10">
+      <DataStateBoundary
+        isLoading={loading}
+        isError={Boolean(error)}
+        errorMessage={error ?? t("documents", "failedToLoadDocuments")}
+      >
+        <SectionCard title={t("documents", "userDocuments")}>
+          <div className="space-y-3">
             {UNIQUE_DOCUMENT_SLOTS.map((slot) => {
               const document = getDocumentForSlot(slot);
               const isUploading = uploadingKey === slot.key;
 
               return (
-                <div
+                <ListRow
                   key={slot.key}
-                  className="flex flex-col gap-3 px-4 py-3 hover:bg-white/5 md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/30 text-white">
-                      <FileText className="h-4 w-4" />
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase text-slate-400">
-                        {t("documents", slot.labelKey)}
-                      </p>
-
+                  leading={<FileText className="h-4 w-4" />}
+                  title={t("documents", slot.labelKey)}
+                  subtitle={
+                    document
+                      ? document.file_name || "document"
+                      : t("documents", "missingDocument")
+                  }
+                  meta={
+                    document ? (
+                      <ListChip icon={<CalendarDays className="h-3 w-3" />}>
+                        {formatDate(document.created_at, localeTag)}
+                      </ListChip>
+                    ) : undefined
+                  }
+                  actions={
+                    <div className="flex flex-wrap justify-end gap-2">
                       {document ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => void handlePreview(document.id)}
-                            className="block max-w-full truncate text-left text-sm font-semibold text-white hover:underline"
-                          >
-                            {document.file_name}
-                          </button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() =>
+                            void handlePreview(document.id, document.file_name)
+                          }
+                        >
+                          {t("documents", "viewDocument")}
+                        </Button>
+                      ) : null}
 
-                          <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-                            <CalendarDays className="h-3.5 w-3.5" />
-                            {formatDate(document.created_at)}
-                          </div>
-                        </>
-                      ) : (
-                        <p className="text-sm text-slate-400">
-                          {t("documents", "missingDocument")}
-                        </p>
-                      )}
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        ref={(element) => {
+                          fileInputsRef.current[slot.key] = element;
+                        }}
+                        disabled={isUploading}
+                        onChange={(event) =>
+                          void handleUniqueUpload(
+                            slot,
+                            event.target.files?.[0] || null
+                          )
+                        }
+                        className="hidden"
+                      />
+
+                      <Button
+                        size="sm"
+                        disabled={isUploading}
+                        loading={isUploading}
+                        onClick={() =>
+                          fileInputsRef.current[slot.key]?.click()
+                        }
+                      >
+                        <Upload className="h-4 w-4" />
+                        {document
+                          ? t("documents", "replaceDocument")
+                          : t("documents", "addDocument")}
+                      </Button>
                     </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      ref={(element) => {
-                        fileInputsRef.current[slot.key] = element;
-                      }}
-                      disabled={isUploading}
-                      onChange={(event) =>
-                        void handleUniqueUpload(
-                          slot,
-                          event.target.files?.[0] || null
-                        )
-                      }
-                      className="hidden"
-                    />
-
-                    <Button
-                      size="sm"
-                      className="rounded-full"
-                      disabled={isUploading}
-                      loading={isUploading}
-                      onClick={() => fileInputsRef.current[slot.key]?.click()}
-                    >
-                      <Upload className="h-4 w-4" />
-                      {document
-                        ? t("documents", "replaceDocument")
-                        : t("documents", "addDocument")}
-                    </Button>
-                  </div>
-                </div>
+                  }
+                />
               );
             })}
           </div>
-        </div>
+        </SectionCard>
 
         <SectionCard title={t("documents", "medicalLeaves")}>
           <div className="space-y-3">
@@ -273,10 +257,11 @@ export default function MyDocumentsListScreen() {
 
               <Button
                 size="sm"
-                className="rounded-full"
                 disabled={uploadingKey === "medical_certificate"}
                 loading={uploadingKey === "medical_certificate"}
-                onClick={() => fileInputsRef.current.medical_certificate?.click()}
+                onClick={() =>
+                  fileInputsRef.current.medical_certificate?.click()
+                }
               >
                 <Upload className="h-4 w-4" />
                 {t("documents", "addMedicalLeave")}
@@ -288,67 +273,50 @@ export default function MyDocumentsListScreen() {
                 {t("documents", "noMedicalLeaves")}
               </p>
             ) : (
-              <div className="overflow-hidden rounded-[22px] border border-white/10 bg-white/5">
-                <div className="divide-y divide-white/10">
-                  {medicalDocuments.map((document) => (
-                    <div
-                      key={document.id}
-                      className="flex flex-col gap-3 px-4 py-3 hover:bg-white/5 md:flex-row md:items-center md:justify-between"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/30 text-white">
-                          <FileText className="h-4 w-4" />
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase text-slate-400">
-                            {t("documents", "medicalLeave")}
-                          </p>
-
-                          <button
-                            type="button"
-                            onClick={() => void handlePreview(document.id)}
-                            className="block max-w-full truncate text-left text-sm font-semibold text-white hover:underline"
-                          >
-                            {document.file_name}
-                          </button>
-
-                          <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-                            <CalendarDays className="h-3.5 w-3.5" />
-                            {formatDate(document.created_at)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="space-y-2.5">
+                {medicalDocuments.map((document) => (
+                  <ListRow
+                    key={document.id}
+                    leading={<FileText className="h-4 w-4" />}
+                    title={document.file_name || "document"}
+                    subtitle={t("documents", "medicalLeave")}
+                    meta={
+                      <ListChip icon={<CalendarDays className="h-3 w-3" />}>
+                        {formatDate(document.created_at, localeTag)}
+                      </ListChip>
+                    }
+                    actions={
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          void handlePreview(document.id, document.file_name)
+                        }
+                      >
+                        {t("documents", "viewDocument")}
+                      </Button>
+                    }
+                  />
+                ))}
               </div>
             )}
           </div>
         </SectionCard>
+      </DataStateBoundary>
 
-        {preview ? (
-          <SectionCard>
-            <div className="space-y-3">
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={closePreview}
-                  className="rounded-full border border-white/10 bg-white/10 text-white"
-                >
-                  <X className="h-4 w-4" />
-                  {t("documents", "close")}
-                </Button>
-              </div>
-
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                <iframe src={preview} className="h-[70vh] w-full" />
-              </div>
-            </div>
-          </SectionCard>
+      <AppModal
+        open={Boolean(previewUrl)}
+        onClose={closePreview}
+        title={previewName}
+      >
+        {previewUrl ? (
+          <iframe
+            src={previewUrl}
+            title={previewName}
+            className="h-[70vh] w-full rounded-xl bg-white"
+          />
         ) : null}
-      </div>
-    </DataStateBoundary>
+      </AppModal>
+    </div>
   );
 }

@@ -3,9 +3,19 @@
 import { type ReactNode } from "react";
 import { ShieldCheck, UserRound, Wrench } from "lucide-react";
 
+import Card from "@/components/ui/card";
+
+type LoginRole = "admin" | "employee" | "mechanic";
+
+type RoleSelectorText = {
+  admin: string;
+  employee: string;
+  mechanic: string;
+};
+
 type Props = {
-  text: any;
-  onSelect: (role: "admin" | "employee" | "mechanic") => void;
+  text: RoleSelectorText;
+  onSelect: (role: LoginRole) => void;
 };
 
 export default function RoleSelector({ text, onSelect }: Props) {
@@ -42,18 +52,18 @@ function RoleCard({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <Card
+      interactive
       onClick={onClick}
-      className="group flex h-40 flex-col items-center justify-center gap-3 rounded-[28px] border border-white/10 bg-white/10 shadow-[0_8px_20px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all duration-300 ease-out hover:-translate-y-1.5 hover:bg-white/14 hover:shadow-[0_20px_50px_rgba(0,0,0,0.26)]"
+      className="flex h-40 flex-col items-center justify-center gap-3"
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-black text-white transition-all duration-300 group-hover:scale-110 group-hover:rotate-1">
+      <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-black text-white transition group-hover:scale-110 group-hover:rotate-1">
         {icon}
       </div>
 
       <span className="text-[15px] font-semibold tracking-tight text-white">
         {label}
       </span>
-    </button>
+    </Card>
   );
 }

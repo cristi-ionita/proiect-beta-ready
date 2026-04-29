@@ -9,7 +9,8 @@ type ButtonVariant =
   | "secondary"
   | "ghost"
   | "danger"
-  | "filter";
+  | "filter"
+  | "back";
 
 type ButtonDotColor = "blue" | "amber" | "slate";
 type ButtonSize = "sm" | "md" | "lg";
@@ -29,7 +30,7 @@ const baseStyles =
 
 const sizeStyles: Record<ButtonSize, string> = {
   sm: "h-9 px-3.5 text-sm",
-  md: "px-4 py-2.5 text-sm",
+  md: "h-10 px-4 text-sm",
   lg: "h-11 px-5 text-base",
 };
 
@@ -37,21 +38,18 @@ const variantStyles: Record<Exclude<ButtonVariant, "filter">, string> = {
   primary:
     "rounded-xl border border-blue-600 bg-blue-600 text-white hover:bg-blue-500",
   secondary:
-    "rounded-xl border border-slate-200 bg-white text-slate-900 hover:bg-slate-100",
+    "rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15 backdrop-blur-md",
   ghost:
     "rounded-xl border border-transparent bg-transparent text-slate-200 hover:bg-white/10",
   danger:
-    "rounded-xl border border-rose-400/30 bg-rose-500/80 text-white hover:bg-rose-500",
+    "rounded-xl border border-rose-400/30 bg-rose-500/85 text-white hover:bg-rose-500",
+  back:
+    "rounded-full border border-white/10 bg-black/70 text-white hover:bg-black/85 backdrop-blur-md",
 };
 
 function getFilterDotClass(dotColor: ButtonDotColor): string {
-  if (dotColor === "blue") {
-    return "bg-blue-400";
-  }
-
-  if (dotColor === "amber") {
-    return "bg-amber-400";
-  }
+  if (dotColor === "blue") return "bg-blue-400";
+  if (dotColor === "amber") return "bg-amber-400";
 
   return "bg-slate-400";
 }

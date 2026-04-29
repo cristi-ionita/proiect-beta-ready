@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import Card from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type StatCardProps = {
   title: string;
@@ -12,12 +13,7 @@ type StatCardProps = {
   onClick?: () => void;
   className?: string;
   valueClassName?: string;
-  hideValue?: boolean;
 };
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 export default function StatCard({
   title,
@@ -38,11 +34,11 @@ export default function StatCard({
       className={cn("flex min-h-[120px] flex-col gap-2.5", className)}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-black text-white transition-all duration-300 group-hover:scale-110 group-hover:rotate-1">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-black text-white transition group-hover:scale-110 group-hover:rotate-1">
           {icon}
         </div>
 
-        {value !== undefined && value !== null ? (
+        {value !== undefined && value !== null && (
           <span
             className={cn(
               "text-2xl font-semibold tracking-tight text-white",
@@ -51,7 +47,7 @@ export default function StatCard({
           >
             {value}
           </span>
-        ) : null}
+        )}
       </div>
 
       <p className="text-[14px] font-semibold tracking-tight text-white">

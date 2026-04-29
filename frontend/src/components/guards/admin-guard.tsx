@@ -16,13 +16,12 @@ export default function AdminGuard({ children }: AdminGuardProps) {
   const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
-    const token = getAdminToken();
-    const allowed = Boolean(token);
+    const allowed = Boolean(getAdminToken());
 
     if (!allowed) {
       setHasAccess(false);
       setIsChecking(false);
-      router.replace("/");
+      router.replace("/?sessionExpired=1");
       return;
     }
 

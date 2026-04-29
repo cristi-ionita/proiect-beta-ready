@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+
 type FormFieldProps = {
   label: string;
   required?: boolean;
@@ -8,10 +10,6 @@ type FormFieldProps = {
   children: ReactNode;
   className?: string;
 };
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 export default function FormField({
   label,

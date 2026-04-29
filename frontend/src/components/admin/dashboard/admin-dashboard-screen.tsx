@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
@@ -13,10 +14,9 @@ import {
 import CardShell from "@/components/patterns/card-shell";
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import StatCard from "@/components/patterns/stat-card";
-
-import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import { useAdminDashboard } from "@/hooks/dashboard/use-admin-dashboard";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
 type Accent = "blue" | "violet" | "rose" | "emerald";
 
@@ -95,20 +95,18 @@ export default function AdminDashboardScreen() {
       isError={Boolean(error)}
       errorMessage={error ?? t("dashboard", "failedToLoadDashboard")}
     >
-      <div className="space-y-6">
-        <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
-          {DASHBOARD_CARDS.map((card) => (
-            <CardShell key={card.key} accent={card.accent}>
-              <StatCard
-                title={t("dashboard", card.title)}
-                value={safeCounts[card.key]}
-                icon={card.icon}
-                onClick={() => router.push(card.href)}
-              />
-            </CardShell>
-          ))}
-        </section>
-      </div>
+      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+        {DASHBOARD_CARDS.map((card) => (
+          <CardShell key={card.key} accent={card.accent}>
+            <StatCard
+              title={t("dashboard", card.title)}
+              value={safeCounts[card.key]}
+              icon={card.icon}
+              onClick={() => router.push(card.href)}
+            />
+          </CardShell>
+        ))}
+      </section>
     </DataStateBoundary>
   );
 }

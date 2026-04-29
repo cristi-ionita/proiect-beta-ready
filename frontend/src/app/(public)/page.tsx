@@ -1,12 +1,15 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { KeyRound } from "lucide-react";
 
 import LoginForm from "@/components/auth/LoginForm";
 import RoleSelector from "@/components/auth/RoleSelector";
 import LanguageSwitcher from "@/components/shared/language-switcher";
+import { getDefaultRouteByRole } from "@/constants/routes";
 import { useLoginPage } from "@/hooks/auth/use-login-page";
+import { getSession } from "@/lib/auth";
 
 function LoginPageShell({ children }: { children: React.ReactNode }) {
   return (
@@ -23,7 +26,7 @@ function LoginPageShell({ children }: { children: React.ReactNode }) {
 function LoginPageHeader({ title }: { title: string }) {
   return (
     <header className="mb-10 flex flex-col items-center justify-center text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/10 bg-white/10 text-white shadow-[0_14px_30px_rgba(0,0,0,0.25)] backdrop-blur-md">
+      <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/10 bg-white/10 text-white backdrop-blur-md">
         <KeyRound className="h-7 w-7" />
       </div>
 
@@ -41,7 +44,7 @@ function LoginPageCheckingState({ label }: { label: string }) {
         <LanguageSwitcher variant="dark" align="right" />
       </div>
 
-      <div className="rounded-[28px] border border-white/10 bg-white/10 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+      <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur-md">
         <p className="text-sm font-medium text-slate-200">{label}</p>
       </div>
     </main>
@@ -49,6 +52,8 @@ function LoginPageCheckingState({ label }: { label: string }) {
 }
 
 function LoginPageContent() {
+  const router = useRouter();
+
   const {
     role,
     identifier,
@@ -68,6 +73,14 @@ function LoginPageContent() {
     handleBack,
     handleSubmit,
   } = useLoginPage();
+
+  useEffect(() => {
+    const session = getSession();
+
+    if (session?.role) {
+      router.replace(getDefaultRouteByRole(session.role));
+    }
+  }, [router]);
 
   const isPageReady = mounted && !checking;
 

@@ -53,6 +53,8 @@ export default function UserGuard({ children }: UserGuardProps) {
   const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     async function checkAccess() {
       const session = getSession();
 
@@ -61,9 +63,11 @@ export default function UserGuard({ children }: UserGuardProps) {
       );
 
       if (!allowed) {
+        if (!mounted) return;
+
         setHasAccess(false);
         setIsChecking(false);
-        router.replace("/");
+        router.replace("/?sessionExpired=1");
         return;
       }
 
@@ -80,6 +84,8 @@ export default function UserGuard({ children }: UserGuardProps) {
         const onboardingComplete =
           isProfileComplete(profile) &&
           areRequiredDocumentsUploaded(safeDocuments);
+
+        if (!mounted) return;
 
         if (!onboardingComplete) {
           if (!isOnboardingRoute) {
@@ -100,6 +106,8 @@ export default function UserGuard({ children }: UserGuardProps) {
       } catch (err) {
         console.error("[UserGuard] onboarding check failed:", err);
 
+        if (!mounted) return;
+
         if (!isOnboardingRoute) {
           router.replace("/employee/onboarding");
           return;
@@ -107,11 +115,17 @@ export default function UserGuard({ children }: UserGuardProps) {
 
         setHasAccess(true);
       } finally {
-        setIsChecking(false);
+        if (mounted) {
+          setIsChecking(false);
+        }
       }
     }
 
     void checkAccess();
+
+    return () => {
+      mounted = false;
+    };
   }, [pathname, router]);
 
   if (isChecking || !hasAccess) {

@@ -27,8 +27,7 @@ export const authMessages = {
     passwordsMatch: "Parolele nu coincid.",
     createError: "Contul nu a putut fi creat.",
     togglePassword: "Afișează sau ascunde parola",
-    toggleConfirmPassword:
-      "Afișează sau ascunde confirmarea parolei",
+    toggleConfirmPassword: "Afișează sau ascunde confirmarea parolei",
     registerSuccess: "Cont creat cu succes. Te poți autentifica.",
     adminRoleMismatch: "Acest cont nu este de administrator.",
     mechanicRoleMismatch: "Acest cont nu este de mecanic.",
@@ -36,20 +35,25 @@ export const authMessages = {
     createEmployeeAccount: "Creează cont angajat",
     createMechanicAccount: "Creează cont mecanic",
     usernameMin: "Username-ul trebuie să aibă minimum 3 caractere.",
-    usernameInvalid: "Username-ul poate conține doar litere, cifre, punct, underscore și cratimă.",
-    employeeRegisterSuccess: 
+    usernameInvalid:
+      "Username-ul poate conține doar litere, cifre, punct, underscore și cratimă.",
+    employeeRegisterSuccess:
       "Cererea pentru cont de angajat a fost trimisă. Verifică emailul pentru confirmare.",
-    mechanicRegisterSuccess: "Cererea pentru cont de mecanic a fost trimisă. Verifică emailul pentru confirmare.",
+    mechanicRegisterSuccess:
+      "Cererea pentru cont de mecanic a fost trimisă. Verifică emailul pentru confirmare.",
     verifyEmailInfo:
-     "Ți-am trimis un email de confirmare. Apasă pe linkul din email pentru a verifica adresa, apoi contul tău va putea fi aprobat de administrator.",
+      "Ți-am trimis un email de confirmare. Apasă pe linkul din email pentru a verifica adresa, apoi contul tău va putea fi aprobat de administrator.",
     forgotPasswordTitle: "Resetare parolă",
-    forgotPasswordDescription: "Introdu adresa de email și îți vom trimite un link pentru resetarea parolei.",
+    forgotPasswordDescription:
+      "Introdu adresa de email și îți vom trimite un link pentru resetarea parolei.",
     emailRequired: "Introdu adresa de email.",
-    forgotPasswordSuccess: "Dacă există un cont pentru acest email, ți-am trimis un link de resetare.",
+    forgotPasswordSuccess:
+      "Dacă există un cont pentru acest email, ți-am trimis un link de resetare.",
     forgotPasswordError: "Nu am putut trimite emailul de resetare.",
     sendResetLink: "Trimite link",
     sending: "Se trimite...",
   },
+
   en: {
     login: "Login",
     user: "User",
@@ -86,18 +90,25 @@ export const authMessages = {
     createEmployeeAccount: "Create employee account",
     createMechanicAccount: "Create mechanic account",
     usernameMin: "Username must be at least 3 characters.",
-    usernameInvalid: "Username can contain only letters, numbers, dots, underscores and hyphens.",
-    employeeRegisterSuccess: "The employee account request has been submitted. Check your email for confirmation.",
-    mechanicRegisterSuccess: "The mechanic account request has been submitted. Check your email for confirmation.",
-    verifyEmailInfo: "We sent you a confirmation email. Open the link in the email to verify your address, then your account can be approved by an administrator.",
+    usernameInvalid:
+      "Username can contain only letters, numbers, dots, underscores and hyphens.",
+    employeeRegisterSuccess:
+      "The employee account request has been submitted. Check your email for confirmation.",
+    mechanicRegisterSuccess:
+      "The mechanic account request has been submitted. Check your email for confirmation.",
+    verifyEmailInfo:
+      "We sent you a confirmation email. Open the link in the email to verify your address, then your account can be approved by an administrator.",
     forgotPasswordTitle: "Reset password",
-    forgotPasswordDescription: "Enter your email address and we will send you a password reset link.",
+    forgotPasswordDescription:
+      "Enter your email address and we will send you a password reset link.",
     emailRequired: "Enter your email address.",
-    forgotPasswordSuccess: "If an account exists for this email, we sent a reset link.",
+    forgotPasswordSuccess:
+      "If an account exists for this email, we sent a reset link.",
     forgotPasswordError: "Could not send the reset email.",
     sendResetLink: "Send link",
     sending: "Sending...",
   },
+
   de: {
     login: "Anmelden",
     user: "Benutzer",
@@ -126,8 +137,7 @@ export const authMessages = {
     passwordsMatch: "Passwörter stimmen nicht überein.",
     createError: "Das Konto konnte nicht erstellt werden.",
     togglePassword: "Passwort ein- oder ausblenden",
-    toggleConfirmPassword:
-      "Passwortbestätigung ein- oder ausblenden",
+    toggleConfirmPassword: "Passwortbestätigung ein- oder ausblenden",
     registerSuccess:
       "Konto erfolgreich erstellt. Du kannst dich jetzt anmelden.",
     adminRoleMismatch: "Dieses Konto ist kein Administratorkonto.",
@@ -136,19 +146,25 @@ export const authMessages = {
     createEmployeeAccount: "Mitarbeiterkonto erstellen",
     createMechanicAccount: "Mechanikerkonto erstellen",
     usernameMin: "Der Benutzername muss mindestens 3 Zeichen lang sein.",
-    usernameInvalid: "Der Benutzername darf nur Buchstaben, Zahlen, Punkte, Unterstriche und Bindestriche enthalten.",
-    employeeRegisterSuccess: "Die Anfrage für ein Mitarbeiterkonto wurde gesendet. Prüfe deine E-Mail zur Bestätigung.",
-    mechanicRegisterSuccess: "Die Anfrage für ein Mechanikerkonto wurde gesendet. Prüfe deine E-Mail zur Bestätigung.",
-    verifyEmailInfo: "Wir haben dir eine Bestätigungs-E-Mail gesendet. Öffne den Link in der E-Mail, um deine Adresse zu bestätigen. Danach kann dein Konto von einem Administrator freigegeben werden.",
+    usernameInvalid:
+      "Der Benutzername darf nur Buchstaben, Zahlen, Punkte, Unterstriche und Bindestriche enthalten.",
+    employeeRegisterSuccess:
+      "Die Anfrage für ein Mitarbeiterkonto wurde gesendet. Prüfe deine E-Mail zur Bestätigung.",
+    mechanicRegisterSuccess:
+      "Die Anfrage für ein Mechanikerkonto wurde gesendet. Prüfe deine E-Mail zur Bestätigung.",
+    verifyEmailInfo:
+      "Wir haben dir eine Bestätigungs-E-Mail gesendet. Öffne den Link in der E-Mail, um deine Adresse zu bestätigen. Danach kann dein Konto von einem Administrator freigegeben werden.",
     forgotPasswordTitle: "Passwort zurücksetzen",
-    forgotPasswordDescription: "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen des Passworts.",
+    forgotPasswordDescription:
+      "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen des Passworts.",
     emailRequired: "Gib deine E-Mail-Adresse ein.",
-    forgotPasswordSuccess: "Falls ein Konto mit dieser E-Mail existiert, haben wir einen Link gesendet.",
+    forgotPasswordSuccess:
+      "Falls ein Konto mit dieser E-Mail existiert, haben wir einen Link gesendet.",
     forgotPasswordError: "Die Reset-E-Mail konnte nicht gesendet werden.",
     sendResetLink: "Link senden",
     sending: "Wird gesendet...",
   },
-} as const;
+} as const satisfies Record<string, Record<string, string>>;
 
 export type AuthMessagesLocale = keyof typeof authMessages;
 export type AuthMessagesKey = keyof typeof authMessages.ro;

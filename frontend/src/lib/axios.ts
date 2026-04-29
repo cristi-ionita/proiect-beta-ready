@@ -1,7 +1,7 @@
 import axios, { AxiosHeaders } from "axios";
 
-import { getAdminToken, getAppToken } from "./auth";
 import { normalizeApiError } from "./api-error";
+import { clearAllAuth, getAdminToken, getAppToken } from "./auth";
 
 export const api = axios.create({
   baseURL: "/api",
@@ -9,9 +9,7 @@ export const api = axios.create({
 });
 
 function getLanguage(): string {
-  if (typeof window === "undefined") {
-    return "ro";
-  }
+  if (typeof window === "undefined") return "ro";
 
   try {
     const stored = window.localStorage.getItem("lang")?.trim().toLowerCase();
@@ -33,9 +31,7 @@ function getLanguage(): string {
 }
 
 function normalizeHeaders(headers?: unknown): AxiosHeaders {
-  if (headers instanceof AxiosHeaders) {
-    return headers;
-  }
+  if (headers instanceof AxiosHeaders) return headers;
 
   if (typeof headers === "string") {
     return AxiosHeaders.from(headers);
@@ -46,6 +42,18 @@ function normalizeHeaders(headers?: unknown): AxiosHeaders {
   }
 
   return new AxiosHeaders();
+}
+
+function redirectToLogin(): void {
+  if (typeof window === "undefined") return;
+
+  clearAllAuth();
+
+  const currentPath = window.location.pathname + window.location.search;
+
+  if (currentPath === "/") return;
+
+  window.location.replace("/?sessionExpired=1");
 }
 
 api.interceptors.request.use((config) => {
@@ -67,10 +75,19 @@ api.interceptors.request.use((config) => {
   headers.delete("X-User-Code");
 
   config.headers = headers;
+
   return config;
 });
 
 api.interceptors.response.use(
   (response) => response,
-  (error: unknown) => Promise.reject(normalizeApiError(error))
+  (error: unknown) => {
+    const normalizedError = normalizeApiError(error);
+
+    if (normalizedError.status === 401) {
+      redirectToLogin();
+    }
+
+    return Promise.reject(normalizedError);
+  }
 );

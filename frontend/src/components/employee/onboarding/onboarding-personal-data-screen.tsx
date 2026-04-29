@@ -9,12 +9,13 @@ import Button from "@/components/ui/button";
 import FormField from "@/components/ui/form-field";
 import Input from "@/components/ui/input";
 import SectionCard from "@/components/ui/section-card";
-
+import { useSafeI18n } from "@/hooks/use-safe-i18n";
 import { isApiClientError } from "@/lib/api-error";
 import { updateMyProfile } from "@/services/profile.api";
 
 export default function OnboardingPersonalDataScreen() {
   const router = useRouter();
+  const { t } = useSafeI18n();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -39,15 +40,16 @@ export default function OnboardingPersonalDataScreen() {
     .filter(Boolean)
     .join(", ");
 
-  const canSave =
+  const canSave = Boolean(
     firstName.trim() &&
-    lastName.trim() &&
-    phone.trim() &&
-    street.trim() &&
-    streetNumber.trim() &&
-    city.trim() &&
-    country.trim() &&
-    postalCode.trim();
+      lastName.trim() &&
+      phone.trim() &&
+      street.trim() &&
+      streetNumber.trim() &&
+      city.trim() &&
+      country.trim() &&
+      postalCode.trim()
+  );
 
   async function handleSave() {
     if (!canSave || saving) return;
@@ -64,16 +66,14 @@ export default function OnboardingPersonalDataScreen() {
         address,
       });
 
-      setSuccessMessage("Profil complet! Datele au fost salvate cu succes.");
+      setSuccessMessage(t("profile", "profileUpdated"));
 
-      setTimeout(() => {
+      window.setTimeout(() => {
         router.replace("/employee/dashboard");
       }, 900);
-    } catch (err) {
+    } catch (err: unknown) {
       setErrorMessage(
-        isApiClientError(err)
-          ? err.message || "Nu s-au putut salva datele."
-          : "Nu s-au putut salva datele."
+        isApiClientError(err) ? err.message : t("profile", "failedToSaveProfile")
       );
     } finally {
       setSaving(false);
@@ -82,46 +82,43 @@ export default function OnboardingPersonalDataScreen() {
 
   return (
     <div className="space-y-6">
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/employee/onboarding")}
-        className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white hover:bg-white/15"
-      >
+      <Button variant="back" onClick={() => router.push("/employee/onboarding")}>
         <ArrowLeft className="h-4 w-4" />
-        Înapoi
+        {t("common", "back")}
       </Button>
 
       {successMessage ? (
         <Alert variant="success" message={successMessage} />
       ) : null}
 
-      {errorMessage ? (
-        <Alert variant="error" message={errorMessage} />
-      ) : null}
+      {errorMessage ? <Alert variant="error" message={errorMessage} /> : null}
 
       <SectionCard
-        title="Date personale"
+        title={t("profile", "personalData")}
         icon={<UserRound className="h-5 w-5" />}
       >
         <div className="grid gap-5 md:grid-cols-2">
-          <FormField label="Prenume" required>
+          <FormField label={t("profile", "firstName")} required>
             <Input
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
+              autoComplete="given-name"
             />
           </FormField>
 
-          <FormField label="Nume" required>
+          <FormField label={t("profile", "lastName")} required>
             <Input
               value={lastName}
               onChange={(event) => setLastName(event.target.value)}
+              autoComplete="family-name"
             />
           </FormField>
 
-          <FormField label="Număr de telefon" required>
+          <FormField label={t("profile", "phone")} required>
             <Input
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
+              autoComplete="tel"
             />
           </FormField>
 
@@ -129,6 +126,7 @@ export default function OnboardingPersonalDataScreen() {
             <Input
               value={street}
               onChange={(event) => setStreet(event.target.value)}
+              autoComplete="address-line1"
             />
           </FormField>
 
@@ -136,6 +134,7 @@ export default function OnboardingPersonalDataScreen() {
             <Input
               value={streetNumber}
               onChange={(event) => setStreetNumber(event.target.value)}
+              autoComplete="address-line2"
             />
           </FormField>
 
@@ -143,6 +142,7 @@ export default function OnboardingPersonalDataScreen() {
             <Input
               value={city}
               onChange={(event) => setCity(event.target.value)}
+              autoComplete="address-level2"
             />
           </FormField>
 
@@ -150,6 +150,7 @@ export default function OnboardingPersonalDataScreen() {
             <Input
               value={country}
               onChange={(event) => setCountry(event.target.value)}
+              autoComplete="country-name"
             />
           </FormField>
 
@@ -157,17 +158,14 @@ export default function OnboardingPersonalDataScreen() {
             <Input
               value={postalCode}
               onChange={(event) => setPostalCode(event.target.value)}
+              autoComplete="postal-code"
             />
           </FormField>
         </div>
 
         <div className="mt-5 flex justify-end">
-          <Button
-            disabled={!canSave || saving}
-            loading={saving}
-            onClick={handleSave}
-          >
-            Salvează datele
+          <Button disabled={!canSave || saving} loading={saving} onClick={handleSave}>
+            {t("common", "save")}
           </Button>
         </div>
       </SectionCard>

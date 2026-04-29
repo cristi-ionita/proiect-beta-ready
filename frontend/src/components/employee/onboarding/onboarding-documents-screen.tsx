@@ -4,25 +4,29 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  CalendarDays,
   CarFront,
   Check,
   FileText,
   IdCard,
   Trash2,
   Upload,
-  X,
 } from "lucide-react";
 
+import DataStateBoundary from "@/components/patterns/data-state-boundary";
+import ListChip from "@/components/patterns/list-chip";
+import ListRow from "@/components/patterns/list-row";
+import AppModal from "@/components/ui/app-modal";
 import Button from "@/components/ui/button";
 import SectionCard from "@/components/ui/section-card";
+import { useSafeI18n } from "@/hooks/use-safe-i18n";
+import { formatDate } from "@/lib/utils";
 import {
   deleteMyDocument,
   getMyDocuments,
   myDownloadDocumentFile,
   uploadMyDocument,
 } from "@/services/documents.api";
-import { formatDate } from "@/lib/utils";
-
 import type { DocumentItem } from "@/types/document.types";
 
 type RequiredDocumentType = "ID_CARD" | "PASSPORT" | "DRIVER_LICENSE";
@@ -39,8 +43,10 @@ type DocumentWithDates = DocumentItem & {
 
 export default function OnboardingDocumentsScreen() {
   const router = useRouter();
+  const { t, localeTag } = useSafeI18n();
 
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [uploadingType, setUploadingType] =
     useState<RequiredDocumentType | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -48,8 +54,14 @@ export default function OnboardingDocumentsScreen() {
   const [previewLoadingId, setPreviewLoadingId] = useState<number | null>(null);
 
   async function loadDocuments() {
-    const data = await getMyDocuments();
-    setDocuments(Array.isArray(data) ? data : []);
+    try {
+      setLoading(true);
+
+      const data = await getMyDocuments();
+      setDocuments(Array.isArray(data) ? data : []);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -58,37 +70,43 @@ export default function OnboardingDocumentsScreen() {
 
   useEffect(() => {
     return () => {
-      if (preview?.url) URL.revokeObjectURL(preview.url);
+      setPreview((current) => {
+        if (current?.url) URL.revokeObjectURL(current.url);
+        return null;
+      });
     };
-  }, [preview]);
+  }, []);
 
   const identityDocument = useMemo(() => {
     return (
-      documents.find((doc) => {
-        const type = String(doc.type || "").toUpperCase();
+      documents.find((document) => {
+        const type = String(document.type || "").toUpperCase();
         return type === "ID_CARD" || type === "PASSPORT";
-      }) || null
+      }) ?? null
     );
   }, [documents]);
 
   const driverLicenseDocument = useMemo(() => {
     return (
       documents.find(
-        (doc) => String(doc.type || "").toUpperCase() === "DRIVER_LICENSE"
-      ) || null
+        (document) =>
+          String(document.type || "").toUpperCase() === "DRIVER_LICENSE"
+      ) ?? null
     );
   }, [documents]);
 
   const canSave = Boolean(identityDocument && driverLicenseDocument);
 
   function getDocumentDate(document: DocumentItem) {
-    const doc = document as DocumentWithDates;
-    return doc.updated_at || doc.created_at || null;
+    const currentDocument = document as DocumentWithDates;
+    return currentDocument.updated_at || currentDocument.created_at || null;
   }
 
   function closePreview() {
-    if (preview?.url) URL.revokeObjectURL(preview.url);
-    setPreview(null);
+    setPreview((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url);
+      return null;
+    });
   }
 
   async function handlePreview(document: DocumentItem) {
@@ -98,11 +116,13 @@ export default function OnboardingDocumentsScreen() {
       const blob = await myDownloadDocumentFile(document.id);
       const url = URL.createObjectURL(blob);
 
-      if (preview?.url) URL.revokeObjectURL(preview.url);
+      setPreview((current) => {
+        if (current?.url) URL.revokeObjectURL(current.url);
 
-      setPreview({
-        url,
-        fileName: document.file_name || "document",
+        return {
+          url,
+          fileName: document.file_name || "document",
+        };
       });
     } finally {
       setPreviewLoadingId(null);
@@ -129,9 +149,12 @@ export default function OnboardingDocumentsScreen() {
   async function handleDelete(document: DocumentItem) {
     try {
       setDeletingId(document.id);
+
       await deleteMyDocument(document.id);
 
-      if (preview?.fileName === document.file_name) closePreview();
+      if (preview?.fileName === document.file_name) {
+        closePreview();
+      }
 
       await loadDocuments();
     } finally {
@@ -146,112 +169,93 @@ export default function OnboardingDocumentsScreen() {
 
   return (
     <div className="space-y-6">
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/employee/onboarding")}
-        className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white hover:bg-white/15"
-      >
+      <Button variant="back" onClick={() => router.push("/employee/onboarding")}>
         <ArrowLeft className="h-4 w-4" />
-        Înapoi
+        {t("common", "back")}
       </Button>
 
-      <SectionCard title="Documente obligatorii">
-        <div className="space-y-4">
-          <DocumentRow
-            icon={<IdCard className="h-5 w-5" />}
-            title="ID / Pașaport"
-            description="Carte de identitate sau pașaport."
-            document={identityDocument}
-            loading={
-              uploadingType === "ID_CARD" || uploadingType === "PASSPORT"
-            }
-            deleting={identityDocument ? deletingId === identityDocument.id : false}
-            previewLoading={
-              identityDocument
-                ? previewLoadingId === identityDocument.id
-                : false
-            }
-            date={
-              identityDocument ? getDocumentDate(identityDocument) : null
-            }
-            onUpload={(file) => void handleUpload("ID_CARD", file)}
-            onPreview={() => {
-              if (identityDocument) void handlePreview(identityDocument);
-            }}
-            onDelete={() => {
-              if (identityDocument) void handleDelete(identityDocument);
-            }}
-          />
+      <DataStateBoundary isLoading={loading} isError={false}>
+        <SectionCard title={t("documents", "uploadDocuments")}>
+          <div className="space-y-3">
+            <DocumentRow
+              icon={<IdCard className="h-4 w-4" />}
+              title={t("documents", "identityDocument")}
+              description={t("documents", "identityDocument")}
+              document={identityDocument}
+              loading={uploadingType === "ID_CARD" || uploadingType === "PASSPORT"}
+              deleting={identityDocument ? deletingId === identityDocument.id : false}
+              previewLoading={
+                identityDocument ? previewLoadingId === identityDocument.id : false
+              }
+              date={identityDocument ? getDocumentDate(identityDocument) : null}
+              localeTag={localeTag}
+              onUpload={(file) => void handleUpload("ID_CARD", file)}
+              onPreview={() => {
+                if (identityDocument) void handlePreview(identityDocument);
+              }}
+              onDelete={() => {
+                if (identityDocument) void handleDelete(identityDocument);
+              }}
+            />
 
-          <DocumentRow
-            icon={<CarFront className="h-5 w-5" />}
-            title="Permis auto"
-            description="Permisul de conducere."
-            document={driverLicenseDocument}
-            loading={uploadingType === "DRIVER_LICENSE"}
-            deleting={
-              driverLicenseDocument
-                ? deletingId === driverLicenseDocument.id
-                : false
-            }
-            previewLoading={
-              driverLicenseDocument
-                ? previewLoadingId === driverLicenseDocument.id
-                : false
-            }
-            date={
-              driverLicenseDocument
-                ? getDocumentDate(driverLicenseDocument)
-                : null
-            }
-            onUpload={(file) => void handleUpload("DRIVER_LICENSE", file)}
-            onPreview={() => {
-              if (driverLicenseDocument) void handlePreview(driverLicenseDocument);
-            }}
-            onDelete={() => {
-              if (driverLicenseDocument) void handleDelete(driverLicenseDocument);
-            }}
-          />
-        </div>
-      </SectionCard>
+            <DocumentRow
+              icon={<CarFront className="h-4 w-4" />}
+              title={t("documents", "driverLicense")}
+              description={t("documents", "driverLicense")}
+              document={driverLicenseDocument}
+              loading={uploadingType === "DRIVER_LICENSE"}
+              deleting={
+                driverLicenseDocument
+                  ? deletingId === driverLicenseDocument.id
+                  : false
+              }
+              previewLoading={
+                driverLicenseDocument
+                  ? previewLoadingId === driverLicenseDocument.id
+                  : false
+              }
+              date={
+                driverLicenseDocument
+                  ? getDocumentDate(driverLicenseDocument)
+                  : null
+              }
+              localeTag={localeTag}
+              onUpload={(file) => void handleUpload("DRIVER_LICENSE", file)}
+              onPreview={() => {
+                if (driverLicenseDocument) {
+                  void handlePreview(driverLicenseDocument);
+                }
+              }}
+              onDelete={() => {
+                if (driverLicenseDocument) {
+                  void handleDelete(driverLicenseDocument);
+                }
+              }}
+            />
+          </div>
+        </SectionCard>
+      </DataStateBoundary>
 
       <div className="flex justify-end">
-        <Button
-          size="sm"
-          disabled={!canSave}
-          onClick={handleSave}
-          className="rounded-full px-6"
-        >
+        <Button size="sm" disabled={!canSave} onClick={handleSave}>
           <Check className="h-4 w-4" />
-          Salvează
+          {t("common", "save")}
         </Button>
       </div>
 
-      {preview ? (
-        <SectionCard title={preview.fileName}>
-          <div className="space-y-3">
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={closePreview}
-                className="rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/15"
-              >
-                <X className="h-4 w-4" />
-                Închide
-              </Button>
-            </div>
-
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-              <iframe
-                src={preview.url}
-                title={preview.fileName}
-                className="h-[70vh] w-full"
-              />
-            </div>
-          </div>
-        </SectionCard>
-      ) : null}
+      <AppModal
+        open={Boolean(preview)}
+        onClose={closePreview}
+        title={preview?.fileName}
+      >
+        {preview ? (
+          <iframe
+            src={preview.url}
+            title={preview.fileName}
+            className="h-[70vh] w-full rounded-xl bg-white"
+          />
+        ) : null}
+      </AppModal>
     </div>
   );
 }
@@ -265,6 +269,7 @@ function DocumentRow({
   deleting,
   previewLoading,
   date,
+  localeTag,
   onUpload,
   onPreview,
   onDelete,
@@ -277,36 +282,69 @@ function DocumentRow({
   deleting: boolean;
   previewLoading: boolean;
   date: string | null;
+  localeTag: string;
   onUpload: (file: File | null) => void;
   onPreview: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useSafeI18n();
+
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-black/30 text-white">
-            {icon}
-          </div>
+    <ListRow
+      leading={icon}
+      title={title}
+      subtitle={document ? document.file_name || "document" : description}
+      meta={
+        document ? (
+          <ListChip icon={<CalendarDays className="h-3 w-3" />}>
+            {date ? formatDate(date, localeTag) : t("documents", "viewDocument")}
+          </ListChip>
+        ) : (
+          <ListChip>{t("documents", "missingDocument")}</ListChip>
+        )
+      }
+      actions={
+        <div className="flex flex-wrap justify-end gap-2">
+          {document ? (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={previewLoading}
+                loading={previewLoading}
+                onClick={onPreview}
+              >
+                <FileText className="h-4 w-4" />
+                {t("documents", "viewDocument")}
+              </Button>
 
-          <div>
-            <button
-              type="button"
-              disabled={!document || previewLoading}
-              onClick={onPreview}
-              className="text-left font-semibold text-white hover:underline disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {previewLoading ? "Se deschide..." : title}
-            </button>
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={deleting}
+                loading={deleting}
+                onClick={onDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+                {t("common", "delete")}
+              </Button>
+            </>
+          ) : null}
 
-            <p className="text-sm text-slate-400">{description}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-100">
+          <label
+            className={[
+              "inline-flex h-9 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition",
+              loading
+                ? "cursor-not-allowed bg-white/60 text-slate-500"
+                : "cursor-pointer bg-white text-slate-950 hover:bg-slate-100",
+            ].join(" ")}
+          >
             <Upload className="h-4 w-4" />
-            {loading ? "Se încarcă..." : "Încarcă"}
+            {loading
+              ? t("common", "loading")
+              : document
+                ? t("documents", "replaceDocument")
+                : t("documents", "addDocument")}
 
             <input
               type="file"
@@ -319,43 +357,8 @@ function DocumentRow({
               className="hidden"
             />
           </label>
-
-          {document ? (
-            <Button
-              size="sm"
-              disabled={deleting}
-              onClick={onDelete}
-              className="rounded-full bg-red-600 text-white hover:bg-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-              {deleting ? "Se șterge..." : "Șterge"}
-            </Button>
-          ) : null}
         </div>
-      </div>
-
-      {document ? (
-        <button
-          type="button"
-          onClick={onPreview}
-          disabled={previewLoading}
-          className="mt-4 flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-left hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/30 text-white">
-            <FileText className="h-4 w-4" />
-          </div>
-
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">
-              {document.file_name || "document"}
-            </p>
-
-            <p className="text-xs text-slate-400">
-              {date ? `Încărcat la ${formatDate(date)}` : "Document încărcat"}
-            </p>
-          </div>
-        </button>
-      ) : null}
-    </div>
+      }
+    />
   );
 }

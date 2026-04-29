@@ -91,6 +91,10 @@ function base64UrlDecode(value: string): string | null {
       return window.atob(padded);
     }
 
+    if (typeof Buffer !== "undefined") {
+      return Buffer.from(padded, "base64").toString("utf-8");
+    }
+
     return null;
   } catch {
     return null;

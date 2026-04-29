@@ -25,7 +25,7 @@ export default function MechanicGuard({ children }: MechanicGuardProps) {
     if (!allowed) {
       setHasAccess(false);
       setIsChecking(false);
-      router.replace("/");
+      router.replace("/?sessionExpired=1");
       return;
     }
 

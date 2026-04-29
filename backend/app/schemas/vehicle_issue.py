@@ -39,6 +39,7 @@ class VehicleIssueCreateRequestSchema(BaseSchema):
     need_oil: bool = False
     dashboard_checks: str | None = None
     other_problems: str | None = None
+    has_photos: bool = False
 
     @field_validator("dashboard_checks", "other_problems", mode="before")
     @classmethod
@@ -64,14 +65,32 @@ class VehicleIssueUpdateRequestSchema(BaseSchema):
         return _normalize_optional_text(value)
 
 
+class VehicleIssuePhotoSchema(BaseSchema):
+    id: int
+    file_name: str
+    file_path: str
+    mime_type: str
+    file_size: int
+    created_at: datetime
+
+
 class VehicleIssueReadSchema(BaseSchema):
     id: int
     vehicle_id: int
+    vehicle_license_plate: str | None = None
+    vehicle_brand: str | None = None
+    vehicle_model: str | None = None
+
     assignment_id: int | None = None
+
     reported_by_user_id: int
+    reported_by_name: str | None = None
+    reported_by_shift_number: int | None = None
+
     assigned_mechanic_id: int | None = None
 
     priority: VehicleIssuePriority
+
     need_service_in_km: int | None = None
     need_brakes: bool
     need_tires: bool
@@ -81,16 +100,20 @@ class VehicleIssueReadSchema(BaseSchema):
     other_problems: str | None = None
 
     status: VehicleIssueStatus
+
     scheduled_for: datetime | None = None
     scheduled_location: str | None = None
     started_at: datetime | None = None
     resolved_at: datetime | None = None
     resolution_notes: str | None = None
+
     estimated_cost: int | None = None
     final_cost: int | None = None
 
     created_at: datetime
     updated_at: datetime
+
+    photos: list[VehicleIssuePhotoSchema] = Field(default_factory=list)
 
 
 class VehicleIssueListResponseSchema(BaseSchema):

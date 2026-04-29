@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+
 type PageHeroProps = {
   icon: ReactNode;
   title: string;
@@ -9,10 +11,6 @@ type PageHeroProps = {
   className?: string;
   contentClassName?: string;
 };
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 export default function PageHero({
   icon,
@@ -26,7 +24,7 @@ export default function PageHero({
   return (
     <section
       className={cn(
-        "rounded-[28px] border border-white/10 bg-white/10 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl",
+        "rounded-[28px] border border-white/10 bg-white/10 p-6 backdrop-blur-xl",
         className
       )}
     >
@@ -37,7 +35,7 @@ export default function PageHero({
         )}
       >
         <div>
-          <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/10 bg-white/10 text-white shadow-[0_14px_30px_rgba(0,0,0,0.25)] backdrop-blur-md">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] border border-white/10 bg-white/10 text-white backdrop-blur-md">
             {icon}
           </div>
 
@@ -53,7 +51,7 @@ export default function PageHero({
         </div>
 
         {actions && (
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
             {actions}
           </div>
         )}

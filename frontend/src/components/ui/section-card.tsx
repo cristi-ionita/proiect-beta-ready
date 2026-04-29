@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+
 type SectionCardProps = {
   children: ReactNode;
   title?: string;
@@ -8,10 +10,6 @@ type SectionCardProps = {
   className?: string;
   contentClassName?: string;
 };
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 export default function SectionCard({
   children,
@@ -22,7 +20,7 @@ export default function SectionCard({
   contentClassName,
 }: SectionCardProps) {
   return (
-    <div
+    <section
       className={cn(
         "rounded-[26px] border border-white/10 bg-white/10 p-4 shadow-[0_14px_32px_rgba(0,0,0,0.22)] backdrop-blur-xl",
         className
@@ -32,7 +30,7 @@ export default function SectionCard({
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             {icon ? (
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-black text-white">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black text-white">
                 {icon}
               </div>
             ) : null}
@@ -49,6 +47,6 @@ export default function SectionCard({
       )}
 
       <div className={cn(contentClassName)}>{children}</div>
-    </div>
+    </section>
   );
 }

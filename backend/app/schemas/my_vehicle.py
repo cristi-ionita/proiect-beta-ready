@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from app.schemas.base import BaseSchema
 from app.schemas.user import UserRole
 from app.schemas.vehicle import VehicleStatus
 from app.schemas.vehicle_assignment_admin import AssignmentStatus
-from app.schemas.base import BaseSchema
 
 
 class MyVehicleUserSchema(BaseSchema):
@@ -22,10 +22,10 @@ class MyVehicleVehicleSchema(BaseSchema):
     brand: str
     model: str
     license_plate: str
-    year: int
-    vin: str | None = None
     status: VehicleStatus
     current_mileage: int
+    created_at: datetime
+    updated_at: datetime
 
 
 class MyVehicleAssignmentSchema(BaseSchema):
@@ -40,13 +40,11 @@ class MyVehicleHandoverStartSchema(BaseSchema):
     dashboard_warnings_start: str | None = None
     damage_notes_start: str | None = None
     notes_start: str | None = None
-
     has_documents: bool = False
     has_medkit: bool = False
     has_extinguisher: bool = False
     has_warning_triangle: bool = False
     has_spare_wheel: bool = False
-
     is_completed: bool
 
 
@@ -55,7 +53,6 @@ class MyVehicleHandoverEndSchema(BaseSchema):
     dashboard_warnings_end: str | None = None
     damage_notes_end: str | None = None
     notes_end: str | None = None
-
     is_completed: bool
 
 

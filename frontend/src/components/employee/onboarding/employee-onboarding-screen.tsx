@@ -1,27 +1,44 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, UserRound } from "lucide-react";
 
 import CardShell from "@/components/patterns/card-shell";
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import StatCard from "@/components/patterns/stat-card";
-
+import { useSafeI18n } from "@/hooks/use-safe-i18n";
 import { getMyDocuments } from "@/services/documents.api";
 import { getMyProfileSummary } from "@/services/profile.api";
 
-function isProfileComplete(profile: any) {
+type EmployeeProfileSummary = {
+  employee_profile?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  } | null;
+};
+
+type DocumentSummary = {
+  type?: string | null;
+};
+
+function isProfileComplete(profile: EmployeeProfileSummary) {
+  const employeeProfile = profile.employee_profile;
+
   return Boolean(
-    profile?.employee_profile?.first_name &&
-      profile?.employee_profile?.last_name &&
-      profile?.employee_profile?.phone &&
-      profile?.employee_profile?.address
+    employeeProfile?.first_name?.trim() &&
+      employeeProfile?.last_name?.trim() &&
+      employeeProfile?.phone?.trim() &&
+      employeeProfile?.address?.trim()
   );
 }
 
-function hasDocs(documents: any[]) {
-  const types = documents.map((d) => String(d.type).toUpperCase());
+function hasRequiredDocuments(documents: DocumentSummary[]) {
+  const types = documents.map((document) =>
+    String(document.type || "").toUpperCase()
+  );
 
   return (
     (types.includes("ID_CARD") || types.includes("PASSPORT")) &&
@@ -31,23 +48,25 @@ function hasDocs(documents: any[]) {
 
 export default function EmployeeOnboardingScreen() {
   const router = useRouter();
+  const { t } = useSafeI18n();
 
   const [loading, setLoading] = useState(true);
-  const [complete, setComplete] = useState(false);
 
   useEffect(() => {
-    async function check() {
+    async function checkOnboarding() {
       try {
-        const [profile, docs] = await Promise.all([
+        const [profile, documents] = await Promise.all([
           getMyProfileSummary(),
           getMyDocuments(),
         ]);
 
-        const done = isProfileComplete(profile) && hasDocs(docs);
+        const safeDocuments = Array.isArray(documents) ? documents : [];
 
-        setComplete(done);
+        const complete =
+          isProfileComplete(profile as EmployeeProfileSummary) &&
+          hasRequiredDocuments(safeDocuments);
 
-        if (done) {
+        if (complete) {
           router.replace("/employee/dashboard");
         }
       } finally {
@@ -55,30 +74,28 @@ export default function EmployeeOnboardingScreen() {
       }
     }
 
-    void check();
+    void checkOnboarding();
   }, [router]);
 
   return (
     <DataStateBoundary isLoading={loading} isError={false}>
-      <div className="space-y-6">
-        <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-2">
-          <CardShell accent="blue">
-            <StatCard
-              title="Documente obligatorii"
-              icon={<FileText className="h-6 w-6" />}
-              onClick={() => router.push("/employee/onboarding/documents")}
-            />
-          </CardShell>
+      <section className="grid gap-5 sm:grid-cols-2">
+        <CardShell accent="blue">
+          <StatCard
+            title={t("documents", "uploadDocuments")}
+            icon={<FileText className="h-6 w-6" />}
+            onClick={() => router.push("/employee/onboarding/documents")}
+          />
+        </CardShell>
 
-          <CardShell accent="emerald">
-            <StatCard
-              title="Date personale"
-              icon={<UserRound className="h-6 w-6" />}
-              onClick={() => router.push("/employee/onboarding/personal-data")}
-            />
-          </CardShell>
-        </section>
-      </div>
+        <CardShell accent="emerald">
+          <StatCard
+            title={t("profile", "personalData")}
+            icon={<UserRound className="h-6 w-6" />}
+            onClick={() => router.push("/employee/onboarding/personal-data")}
+          />
+        </CardShell>
+      </section>
     </DataStateBoundary>
   );
 }

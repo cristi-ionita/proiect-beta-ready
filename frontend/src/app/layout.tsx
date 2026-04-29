@@ -49,11 +49,11 @@ type RootLayoutProps = Readonly<{
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html
-      lang="ro"
+      lang="de"
       className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-transparent font-sans text-slate-900">
+      <body className="min-h-screen bg-transparent font-sans text-slate-50">
         <I18nProvider>{children}</I18nProvider>
       </body>
     </html>

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from pathlib import Path
 import os
 import shutil
+from datetime import UTC, datetime
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,6 +63,7 @@ async def _get_handover_report(
             VehicleHandoverReport.assignment_id == assignment_id
         )
     )
+
     return result.scalar_one_or_none()
 
 
@@ -194,10 +195,10 @@ async def get_my_vehicle_page(
             brand=assignment.vehicle.brand,
             model=assignment.vehicle.model,
             license_plate=assignment.vehicle.license_plate,
-            year=assignment.vehicle.year,
-            vin=assignment.vehicle.vin,
             status=assignment.vehicle.status.value,
             current_mileage=assignment.vehicle.current_mileage,
+            created_at=assignment.vehicle.created_at,
+            updated_at=assignment.vehicle.updated_at,
         ),
         assignment=MyVehicleAssignmentSchema(
             id=assignment.id,
@@ -251,12 +252,10 @@ async def reject_assignment(
         assignment.status = AssignmentStatus.REJECTED
         assignment.ended_at = now
         response_status = "rejected"
-
     elif assignment.status == AssignmentStatus.ACTIVE:
         assignment.status = AssignmentStatus.CLOSED
         assignment.ended_at = now
         response_status = "closed"
-
     else:
         raise HTTPException(
             status_code=400,
@@ -273,7 +272,7 @@ async def reject_assignment(
 
 
 @router.post("/photos/{photo_id}/replace", response_model=MyVehiclePhotoSchema)
-async def replace_my_vehicle_photo(
+async def replace_photo(
     photo_id: int,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
@@ -282,14 +281,11 @@ async def replace_my_vehicle_photo(
     assignment = await _get_open_assignment_for_user(db, current_user.id)
 
     if assignment is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No pending or active assignment.",
-        )
+        raise HTTPException(status_code=404, detail="No assignment.")
 
     if assignment.status != AssignmentStatus.PENDING:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="Photos can be replaced only before confirming the assignment.",
         )
 
@@ -303,23 +299,17 @@ async def replace_my_vehicle_photo(
     ).scalar_one_or_none()
 
     if photo is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Photo not found.",
-        )
+        raise HTTPException(status_code=404, detail="Photo not found.")
 
     if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only image files are allowed.",
-        )
+        raise HTTPException(status_code=400, detail="Only image files are allowed.")
 
-    vehicle_folder = UPLOAD_DIR / f"vehicle_{assignment.vehicle_id}"
-    vehicle_folder.mkdir(parents=True, exist_ok=True)
+    folder = UPLOAD_DIR / f"vehicle_{assignment.vehicle_id}"
+    folder.mkdir(parents=True, exist_ok=True)
 
     file_ext = os.path.splitext(file.filename or "")[1] or ".jpg"
     file_name = f"{photo.type.value}_employee_{os.urandom(6).hex()}{file_ext}"
-    file_path = vehicle_folder / file_name
+    file_path = folder / file_name
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -341,7 +331,7 @@ async def replace_my_vehicle_photo(
 
 
 @router.get("/photos/{photo_id}/file")
-async def get_my_vehicle_photo_file(
+async def get_photo(
     photo_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_employee),
@@ -349,7 +339,7 @@ async def get_my_vehicle_photo_file(
     assignment = await _get_open_assignment_for_user(db, current_user.id)
 
     if assignment is None:
-        raise HTTPException(status_code=404, detail="No pending or active assignment.")
+        raise HTTPException(status_code=404, detail="No assignment.")
 
     photo = (
         await db.execute(

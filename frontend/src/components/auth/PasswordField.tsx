@@ -2,6 +2,9 @@
 
 import { Eye, EyeOff } from "lucide-react";
 
+import FormField from "@/components/ui/form-field";
+import Input from "@/components/ui/input";
+
 type Props = {
   label: string;
   value: string;
@@ -20,30 +23,28 @@ export default function PasswordField({
   placeholder,
 }: Props) {
   return (
-    <div className="relative">
-      <label className="mb-2 block text-sm font-medium text-slate-700">
-        {label}
-      </label>
+    <FormField label={label} required>
+      <div className="relative">
+        <Input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="pr-12"
+        />
 
-      <input
-        type={show ? "text" : "password"}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 outline-none transition-all duration-200 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-      />
-
-      <button
-        type="button"
-        onClick={onToggle}
-        className="absolute right-3 top-[42px] rounded-md p-1 text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-900"
-      >
-        {show ? (
-          <EyeOff className="h-[18px] w-[18px]" />
-        ) : (
-          <Eye className="h-[18px] w-[18px]" />
-        )}
-      </button>
-    </div>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-white"
+        >
+          {show ? (
+            <EyeOff className="h-4 w-4" />
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+    </FormField>
   );
 }

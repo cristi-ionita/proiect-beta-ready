@@ -1,19 +1,32 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CarFront, ClipboardList, Users } from "lucide-react";
+import { CarFront, ClipboardList, UserRound, Users } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
-import Card from "@/components/ui/card";
+import ListChip from "@/components/patterns/list-chip";
+import ListRow from "@/components/patterns/list-row";
+import AppModal from "@/components/ui/app-modal";
+import Button from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import Input from "@/components/ui/input";
 import SectionCard from "@/components/ui/section-card";
-
-import { useAdminUsersData } from "@/hooks/admin/use-admin-users-data";
-import { useActiveUsersTableData } from "@/hooks/users/use-active-users-table-data";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
-
 import { isApiClientError } from "@/lib/api-error";
+import { getEmployeeProfile } from "@/services/profile.api";
 import { updateUserShift } from "@/services/users.api";
+import { useActiveUsersTableData } from "@/hooks/users/use-active-users-table-data";
+import { useAdminUsersData } from "@/hooks/users/use-admin-users-data";
+
+type EmployeeProfile = {
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  iban?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+};
 
 export default function AdminUsersScreen() {
   const { t } = useSafeI18n();
@@ -42,6 +55,12 @@ export default function AdminUsersScreen() {
   const [saving, setSaving] = useState(false);
   const [shiftError, setShiftError] = useState("");
 
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileData, setProfileData] = useState<EmployeeProfile | null>(null);
+  const [profileUserName, setProfileUserName] = useState("");
+
   const selectedUser = visibleUsers.find((user) => user.id === selectedUserId);
 
   function getShift(userId: number, fallback: string | null) {
@@ -60,6 +79,14 @@ export default function AdminUsersScreen() {
     setSelectedUserId(null);
     setShiftValue("");
     setShiftError("");
+  }
+
+  function closeProfileModal() {
+    setProfileOpen(false);
+    setProfileLoading(false);
+    setProfileError("");
+    setProfileData(null);
+    setProfileUserName("");
   }
 
   function isShiftTaken(shift: number) {
@@ -109,63 +136,93 @@ export default function AdminUsersScreen() {
     }
   }
 
+  async function openProfileModal(userId: number, userName: string) {
+    try {
+      setProfileOpen(true);
+      setProfileLoading(true);
+      setProfileError("");
+      setProfileData(null);
+      setProfileUserName(userName);
+
+      const profile = await getEmployeeProfile(userId);
+      setProfileData(profile);
+    } catch (err) {
+      setProfileError(
+        isApiClientError(err)
+          ? err.message
+          : "Nu s-au putut încărca datele personale."
+      );
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
   return (
-    <DataStateBoundary
-      isLoading={loading}
-      isError={Boolean(error)}
-      errorMessage={error ?? t("documents", "failedToLoadUsers")}
-    >
-      <div className="space-y-6">
-        <SectionCard
-          title={t("nav", "users")}
-          actions={
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
-              <Users className="h-3.5 w-3.5" />
-              {visibleUsers.length}
-            </div>
-          }
+    <div className="space-y-6">
+      <SectionCard
+        title={t("nav", "users")}
+        actions={
+          <ListChip icon={<Users className="h-3.5 w-3.5" />} variant="blue">
+            {visibleUsers.length}
+          </ListChip>
+        }
+      >
+        <DataStateBoundary
+          isLoading={loading}
+          isError={Boolean(error)}
+          errorMessage={error ?? t("documents", "failedToLoadUsers")}
+          isEmpty={visibleUsers.length === 0}
+          emptyTitle={t("documents", "noUsersFound")}
         >
-          <DataStateBoundary
-            isEmpty={visibleUsers.length === 0}
-            emptyTitle={t("documents", "noUsersFound")}
-          >
-            <div className="space-y-3">
-              {visibleUsers.map((user) => {
-                const shift = getShift(user.id, user.shift_number);
+          <div className="space-y-3">
+            {visibleUsers.map((user) => {
+              const shift = getShift(user.id, user.shift_number);
 
-                return (
-                  <Card key={user.id} className="p-4">
-                    <div className="flex min-w-0 flex-col gap-3">
-                      <p className="truncate text-sm font-semibold text-white">
-                        {user.full_name}
-                      </p>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openShiftDialog(user.id, user.shift_number)
-                          }
-                          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/15"
+              return (
+                <ListRow
+                  key={user.id}
+                  leading={<UserRound className="h-4 w-4" />}
+                  title={user.full_name}
+                  meta={
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openShiftDialog(user.id, user.shift_number)
+                        }
+                      >
+                        <ListChip
+                          icon={<ClipboardList className="h-3 w-3" />}
+                          variant="blue"
                         >
-                          <ClipboardList className="h-3.5 w-3.5 text-slate-300" />
                           {t("common", "shift")}: {shift || "—"}
-                        </button>
+                        </ListChip>
+                      </button>
 
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-slate-200">
-                          <CarFront className="h-3.5 w-3.5 text-slate-300" />
-                          {t("common", "vehicle")}:{" "}
-                          {user.vehicle_license_plate || "—"}
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </DataStateBoundary>
-        </SectionCard>
-      </div>
+                      <ListChip icon={<CarFront className="h-3 w-3" />}>
+                        {t("common", "vehicle")}:{" "}
+                        {user.vehicle_license_plate || "—"}
+                      </ListChip>
+                    </>
+                  }
+                  actions={
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        void openProfileModal(user.id, user.full_name)
+                      }
+                    >
+                      <UserRound className="h-4 w-4" />
+                      Date personale
+                    </Button>
+                  }
+                />
+              );
+            })}
+          </div>
+        </DataStateBoundary>
+      </SectionCard>
 
       <ConfirmDialog
         open={Boolean(selectedUser)}
@@ -178,31 +235,89 @@ export default function AdminUsersScreen() {
         onConfirm={saveShift}
         onCancel={closeShiftDialog}
       >
-        <input
-          autoFocus
-          type="number"
-          min="1"
-          value={shiftValue}
-          disabled={saving}
-          onChange={(event) => {
-            setShiftValue(event.target.value);
-            setShiftError("");
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              saveShift();
-            }
-          }}
-          className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm text-slate-950 outline-none focus:border-slate-400"
-        />
+        <div className="space-y-2">
+          <Input
+            autoFocus
+            type="number"
+            min="1"
+            value={shiftValue}
+            disabled={saving}
+            onChange={(event) => {
+              setShiftValue(event.target.value);
+              setShiftError("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void saveShift();
+              }
+            }}
+          />
 
-        {shiftError ? (
-          <p className="mt-2 text-sm font-medium text-red-600">
-            {shiftError}
-          </p>
-        ) : null}
+          {shiftError ? (
+            <p className="text-sm font-medium text-rose-400">{shiftError}</p>
+          ) : null}
+        </div>
       </ConfirmDialog>
-    </DataStateBoundary>
+
+      <AppModal
+        open={profileOpen}
+        onClose={closeProfileModal}
+        title={profileUserName}
+        subtitle="Date personale"
+        loading={profileLoading}
+        error={profileError}
+      >
+        {profileData ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            <ProfileInfo
+              label={t("profile", "firstName")}
+              value={profileData.first_name}
+            />
+            <ProfileInfo
+              label={t("profile", "lastName")}
+              value={profileData.last_name}
+            />
+            <ProfileInfo
+              label={t("profile", "phone")}
+              value={profileData.phone}
+            />
+            <ProfileInfo
+              label={t("profile", "address")}
+              value={profileData.address}
+            />
+            <ProfileInfo label="IBAN" value={profileData.iban} />
+            <ProfileInfo
+              label={t("profile", "emergencyContactName")}
+              value={profileData.emergency_contact_name}
+            />
+            <ProfileInfo
+              label={t("profile", "emergencyContactPhone")}
+              value={profileData.emergency_contact_phone}
+            />
+          </div>
+        ) : null}
+      </AppModal>
+    </div>
+  );
+}
+
+function ProfileInfo({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-2 break-words text-sm font-semibold text-white">
+        {value || "—"}
+      </p>
+    </div>
   );
 }

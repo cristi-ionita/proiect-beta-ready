@@ -6,6 +6,12 @@ export const ROLES = {
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
+const ROLE_SET: Record<Role, true> = {
+  admin: true,
+  employee: true,
+  mechanic: true,
+};
+
 export function isRole(value: string): value is Role {
-  return Object.values(ROLES).includes(value as Role);
+  return value in ROLE_SET;
 }

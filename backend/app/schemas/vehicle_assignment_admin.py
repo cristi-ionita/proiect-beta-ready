@@ -11,7 +11,7 @@ from app.schemas.base import BaseSchema
 class VehicleAssignmentCreateRequestSchema(BaseSchema):
     user_id: int = Field(..., gt=0)
     vehicle_id: int = Field(..., gt=0)
-    shift_number: int = Field(..., gt=0)
+    shift_number: int | None = Field(default=None, gt=0)
 
 
 class VehicleAssignmentReadSchema(BaseSchema):
@@ -24,7 +24,7 @@ class VehicleAssignmentReadSchema(BaseSchema):
     vehicle_license_plate: str
     vehicle_brand: str
     vehicle_model: str
-    shift_number: int
+    shift_number: int | None = None
 
     status: AssignmentStatus
 

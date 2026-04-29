@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { userLogin } from "@/services/auth.api";
@@ -15,10 +15,28 @@ import {
 import { isApiClientError } from "@/lib/api-error";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import { authMessages } from "@/lib/i18n/auth-messages";
+import { getTranslation, type Locale } from "@/lib/i18n";
 
 export type LoginRole = "admin" | "employee" | "mechanic" | null;
-type SupportedLocale = "ro" | "en" | "de";
-type LoginText = (typeof authMessages)[keyof typeof authMessages];
+
+type LoginText = {
+  [key: string]: string;
+  login: string;
+  back: string;
+  forgotPassword: string;
+  toggleSecret: string;
+  invalid: string;
+  fill: string;
+  error: string;
+  registerSuccess: string;
+  username: string;
+  password: string;
+  createEmployeeAccount: string;
+  createMechanicAccount: string;
+  adminRoleMismatch: string;
+  mechanicRoleMismatch: string;
+  employeeRoleMismatch: string;
+};
 
 type BackendLoginUser = {
   id?: number;
@@ -61,10 +79,13 @@ function resolveUserId(user: BackendLoginUser): number | null {
   return null;
 }
 
-function getRoleMismatchMessage(role: Exclude<LoginRole, null>): string {
-  if (role === "admin") return "Acest cont nu este de administrator.";
-  if (role === "mechanic") return "Acest cont nu este de mecanic.";
-  return "Acest cont nu este de angajat.";
+function getRoleMismatchMessage(
+  role: Exclude<LoginRole, null>,
+  text: LoginText
+): string {
+  if (role === "admin") return text.adminRoleMismatch;
+  if (role === "mechanic") return text.mechanicRoleMismatch;
+  return text.employeeRoleMismatch;
 }
 
 export function useLoginPage(): UseLoginPageResult {
@@ -72,10 +93,45 @@ export function useLoginPage(): UseLoginPageResult {
   const searchParams = useSearchParams();
   const { locale } = useI18n();
 
-  const safeLocale: SupportedLocale =
-    locale === "ro" || locale === "en" || locale === "de" ? locale : "en";
+  const safeLocale: Locale =
+    locale === "ro" || locale === "en" || locale === "de" ? locale : "de";
 
-  const text = authMessages[safeLocale];
+  const text = useMemo<LoginText>(
+    () => ({
+      ...authMessages[safeLocale],
+      username: getTranslation(safeLocale, "common", "username"),
+      password: getTranslation(safeLocale, "common", "password"),
+      createEmployeeAccount: getTranslation(
+        safeLocale,
+        "common",
+        "createEmployeeAccount"
+      ),
+      createMechanicAccount: getTranslation(
+        safeLocale,
+        "common",
+        "createMechanicAccount"
+      ),
+            adminRoleMismatch:
+        safeLocale === "ro"
+          ? "Acest cont nu este de administrator."
+          : safeLocale === "de"
+            ? "Dieses Konto ist kein Administratorkonto."
+            : "This account is not an administrator account.",
+      mechanicRoleMismatch:
+        safeLocale === "ro"
+          ? "Acest cont nu este de mecanic."
+          : safeLocale === "de"
+            ? "Dieses Konto ist kein Mechanikerkonto."
+            : "This account is not a mechanic account.",
+      employeeRoleMismatch:
+        safeLocale === "ro"
+          ? "Acest cont nu este de angajat."
+          : safeLocale === "de"
+            ? "Dieses Konto ist kein Mitarbeiterkonto."
+            : "This account is not an employee account.",
+    }),
+    [safeLocale]
+  );
 
   const [mounted, setMounted] = useState(false);
   const [role, setRole] = useState<LoginRole>(null);
@@ -131,7 +187,7 @@ export function useLoginPage(): UseLoginPageResult {
 
       return () => clearTimeout(timeout);
     }
-  }, [registered, text, router]);
+  }, [registered, text.registerSuccess, router]);
 
   function resetForm() {
     setIdentifierState("");
@@ -200,7 +256,7 @@ export function useLoginPage(): UseLoginPageResult {
 
       if (role !== backendRole) {
         clearAllAuth();
-        setError(getRoleMismatchMessage(role));
+        setError(getRoleMismatchMessage(role, text));
         return;
       }
 

@@ -5,22 +5,37 @@ import { useState, type FormEvent } from "react";
 import { ArrowLeft, CheckCircle, UserPlus, Wrench } from "lucide-react";
 
 import PasswordField from "@/components/auth/PasswordField";
-import { register } from "@/services/auth.api";
+import Alert from "@/components/ui/alert";
+import Button from "@/components/ui/button";
+import FormField from "@/components/ui/form-field";
+import Input from "@/components/ui/input";
 import { isApiClientError } from "@/lib/api-error";
+import { authMessages } from "@/lib/i18n/auth-messages";
+import { useI18n } from "@/lib/i18n/use-i18n";
+import { register } from "@/services/auth.api";
 
 type RegisterRole = "employee" | "mechanic";
 
 type RegisterFormProps = {
   role: RegisterRole;
-  submitLabel: string;
-  successMessage: string;
 };
 
-export default function RegisterForm({
-  role,
-  submitLabel,
-  successMessage,
-}: RegisterFormProps) {
+export default function RegisterForm({ role }: RegisterFormProps) {
+  const { locale } = useI18n();
+  const safeLocale =
+    locale === "ro" || locale === "en" || locale === "de" ? locale : "de";
+  const text = authMessages[safeLocale];
+
+  const successMessage =
+    role === "mechanic"
+      ? text.mechanicRegisterSuccess
+      : text.employeeRegisterSuccess;
+
+  const submitLabel =
+    role === "mechanic"
+      ? text.createMechanicAccount
+      : text.createEmployeeAccount;
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
@@ -53,29 +68,27 @@ export default function RegisterForm({
       !normalizedPassword ||
       !normalizedConfirmPassword
     ) {
-      setError("Completează toate câmpurile.");
+      setError(text.fillAll);
       return;
     }
 
     if (normalizedUsername.length < 3) {
-      setError("Username-ul trebuie să aibă minimum 3 caractere.");
+      setError(text.usernameMin);
       return;
     }
 
     if (!/^[a-zA-Z0-9._-]+$/.test(normalizedUsername)) {
-      setError(
-        "Username-ul poate conține doar litere, cifre, punct, underscore și cratimă."
-      );
+      setError(text.usernameInvalid);
       return;
     }
 
     if (normalizedPassword.length < 8) {
-      setError("Parola trebuie să aibă minimum 8 caractere.");
+      setError(text.passwordMin);
       return;
     }
 
     if (normalizedPassword !== normalizedConfirmPassword) {
-      setError("Parolele nu coincid.");
+      setError(text.passwordsMatch);
       return;
     }
 
@@ -92,7 +105,6 @@ export default function RegisterForm({
       });
 
       setSuccess(true);
-
       setFirstName("");
       setLastName("");
       setUsername("");
@@ -100,11 +112,7 @@ export default function RegisterForm({
       setPassword("");
       setConfirmPassword("");
     } catch (err: unknown) {
-      setError(
-        isApiClientError(err)
-          ? err.message
-          : "Nu am putut trimite cererea de înregistrare."
-      );
+      setError(isApiClientError(err) ? err.message : text.createError);
     } finally {
       setLoading(false);
     }
@@ -113,72 +121,60 @@ export default function RegisterForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-[640px] rounded-[24px] border border-white/10 bg-gradient-to-b from-white to-slate-50 p-4 md:p-5 shadow-[0_20px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl"
+      className="w-full max-w-[640px] rounded-[26px] border border-white/10 bg-white/10 p-5 backdrop-blur-md"
     >
       {!success ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              Prenume
-            </label>
-            <input
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField label={text.firstName} required>
+            <Input
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
               autoComplete="given-name"
-              placeholder="Prenume"
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition-all duration-200 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+              placeholder={text.firstName}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              Nume
-            </label>
-            <input
+          <FormField label={text.lastName} required>
+            <Input
               value={lastName}
               onChange={(event) => setLastName(event.target.value)}
               autoComplete="family-name"
-              placeholder="Nume"
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition-all duration-200 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
+              placeholder={text.lastName}
             />
+          </FormField>
+
+          <div className="md:col-span-2">
+            <FormField label={text.username} required>
+              <Input
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder={text.username}
+              />
+            </FormField>
           </div>
 
           <div className="md:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              autoComplete="username"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="username"
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition-all duration-200 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="email@exemplu.ro"
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition-all duration-200 focus:border-slate-300 focus:ring-2 focus:ring-slate-200"
-            />
+            <FormField label={text.email} required>
+              <Input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="email@example.com"
+              />
+            </FormField>
           </div>
 
           <PasswordField
-            label="Parolă"
+            label={text.password}
             value={password}
             onChange={setPassword}
             show={showPassword}
@@ -186,7 +182,7 @@ export default function RegisterForm({
           />
 
           <PasswordField
-            label="Confirmă parola"
+            label={text.confirmPassword}
             value={confirmPassword}
             onChange={setConfirmPassword}
             show={showConfirmPassword}
@@ -194,51 +190,36 @@ export default function RegisterForm({
           />
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-5 text-center">
-          <CheckCircle className="h-12 w-12 text-green-500" />
-          <p className="mt-3 text-sm font-semibold text-slate-800">
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <CheckCircle className="h-12 w-12 text-emerald-300" />
+          <p className="mt-3 text-sm font-semibold text-white">
             {successMessage}
           </p>
-          <p className="mt-2 max-w-md text-sm text-slate-600">
-            Ți-am trimis un email de confirmare. Apasă pe linkul din email pentru
-            a verifica adresa, apoi contul tău va putea fi aprobat de
-            administrator.
+          <p className="mt-2 max-w-md text-sm text-slate-300">
+            {text.verifyEmailInfo}
           </p>
         </div>
       )}
 
-      {error ? (
-        <div
-          className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
-          role="alert"
-          aria-live="polite"
-        >
-          {error}
-        </div>
-      ) : null}
+      {error ? <Alert className="mt-4" variant="error" message={error} /> : null}
 
-      <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link
-          href="/"
-          className="inline-flex h-11 min-w-[170px] items-center justify-center gap-2 rounded-xl bg-black px-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 hover:shadow-md"
-        >
-          <ArrowLeft className="h-4 w-4 text-white" />
-          <span className="text-white">Înapoi la login</span>
+      <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/">
+          <Button type="button" variant="secondary">
+            <ArrowLeft className="h-4 w-4" />
+            {text.backToLogin}
+          </Button>
         </Link>
 
         {!success ? (
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex h-11 min-w-[170px] items-center justify-center gap-2 rounded-xl bg-black px-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button type="submit" loading={loading} disabled={loading}>
             {role === "mechanic" ? (
               <Wrench className="h-4 w-4" />
             ) : (
               <UserPlus className="h-4 w-4" />
             )}
-            {loading ? "Se creează..." : submitLabel}
-          </button>
+            {loading ? text.creating : submitLabel}
+          </Button>
         ) : null}
       </div>
     </form>

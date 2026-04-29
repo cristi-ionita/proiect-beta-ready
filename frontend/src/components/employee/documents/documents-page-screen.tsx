@@ -9,6 +9,7 @@ import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import StatCard from "@/components/patterns/stat-card";
 import { ROUTES } from "@/constants/routes";
 import { useMyDocuments } from "@/hooks/documents/use-my-documents";
+import { useSafeI18n } from "@/hooks/use-safe-i18n";
 
 type Accent = "blue" | "violet";
 
@@ -22,34 +23,37 @@ type DocumentCardConfig = {
   href: string;
 };
 
-const DOCUMENT_CARDS: DocumentCardConfig[] = [
-  {
-    key: "myDocuments",
-    title: "Documente personale",
-    icon: <FilePlus2 className="h-6 w-6" />,
-    accent: "blue",
-    href: `${ROUTES.EMPLOYEE.DOCUMENTS}/my-documents`,
-  },
-  {
-    key: "companyDocuments",
-    title: "Contract & Payslips",
-    icon: <Files className="h-6 w-6" />,
-    accent: "violet",
-    href: `${ROUTES.EMPLOYEE.DOCUMENTS}/contract`,
-  },
-];
-
 export default function DocumentsPageScreen() {
   const router = useRouter();
+  const { t } = useSafeI18n();
   const { data, loading, error } = useMyDocuments();
 
   const documents = Array.isArray(data) ? data : [];
 
+  const cards: DocumentCardConfig[] = [
+    {
+      key: "myDocuments",
+      title: t("documents", "userDocuments"),
+      icon: <FilePlus2 className="h-6 w-6" />,
+      accent: "blue",
+      href: `${ROUTES.EMPLOYEE.DOCUMENTS}/my-documents`,
+    },
+    {
+      key: "companyDocuments",
+      title: t("documents", "contractPayslip"),
+      icon: <Files className="h-6 w-6" />,
+      accent: "violet",
+      href: `${ROUTES.EMPLOYEE.DOCUMENTS}/contract`,
+    },
+  ];
+
   const safeCounts = useMemo(() => {
-    const myDocuments = documents.filter((doc) => doc.category === "personal");
+    const myDocuments = documents.filter(
+      (document) => document.category === "personal"
+    );
 
     const companyDocuments = documents.filter(
-      (doc) => doc.type === "contract" || doc.type === "payslip"
+      (document) => document.type === "contract" || document.type === "payslip"
     );
 
     return {
@@ -62,25 +66,20 @@ export default function DocumentsPageScreen() {
     <DataStateBoundary
       isLoading={loading}
       isError={Boolean(error)}
-      errorMessage={error ?? "Nu s-au putut încărca documentele"}
-      isEmpty={documents.length === 0}
-      emptyTitle="Nu există documente"
-      emptyDescription="Documentele vor apărea aici după încărcare."
+      errorMessage={error ?? t("documents", "failedToLoadDocuments")}
     >
-      <div className="space-y-6">
-        <section className="grid gap-5 sm:grid-cols-2">
-          {DOCUMENT_CARDS.map((card) => (
-            <CardShell key={card.key} accent={card.accent}>
-              <StatCard
-                title={card.title}
-                value={safeCounts[card.key]}
-                icon={card.icon}
-                onClick={() => router.push(card.href)}
-              />
-            </CardShell>
-          ))}
-        </section>
-      </div>
+      <section className="grid gap-5 sm:grid-cols-2">
+        {cards.map((card) => (
+          <CardShell key={card.key} accent={card.accent}>
+            <StatCard
+              title={card.title}
+              value={safeCounts[card.key]}
+              icon={card.icon}
+              onClick={() => router.push(card.href)}
+            />
+          </CardShell>
+        ))}
+      </section>
     </DataStateBoundary>
   );
 }

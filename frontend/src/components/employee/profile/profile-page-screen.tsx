@@ -8,9 +8,10 @@ import CardShell from "@/components/patterns/card-shell";
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import StatCard from "@/components/patterns/stat-card";
 import { ROUTES } from "@/constants/routes";
+import { useSafeI18n } from "@/hooks/use-safe-i18n";
 import { useProfileSummary } from "@/hooks/profile/use-profile-summary";
 
-type Accent = "blue" | "violet" | "rose" | "emerald";
+type Accent = "rose" | "emerald";
 
 type ProfileCardKey = "personalData" | "accountSettings";
 
@@ -22,50 +23,48 @@ type ProfileCardConfig = {
   href: string;
 };
 
-const PROFILE_CARDS: ProfileCardConfig[] = [
-  {
-    key: "personalData",
-    title: "Date personale",
-    icon: <UserRound className="h-6 w-6" />,
-    accent: "rose",
-    href: `${ROUTES.EMPLOYEE.PROFILE}/personal-data`,
-  },
-  {
-    key: "accountSettings",
-    title: "Setări logare cont",
-    icon: <Settings className="h-6 w-6" />,
-    accent: "emerald",
-    href: `${ROUTES.EMPLOYEE.PROFILE}/account`,
-  },
-];
-
 export default function ProfilePageScreen() {
   const router = useRouter();
+  const { t } = useSafeI18n();
   const { data, loading, error } = useProfileSummary();
+
+  const cards: ProfileCardConfig[] = [
+    {
+      key: "personalData",
+      title: t("profile", "personalData"),
+      icon: <UserRound className="h-6 w-6" />,
+      accent: "rose",
+      href: `${ROUTES.EMPLOYEE.PROFILE}/personal-data`,
+    },
+    {
+      key: "accountSettings",
+      title: t("profile", "loginSettings"),
+      icon: <Settings className="h-6 w-6" />,
+      accent: "emerald",
+      href: `${ROUTES.EMPLOYEE.PROFILE}/account`,
+    },
+  ];
 
   return (
     <DataStateBoundary
       isLoading={loading}
       isError={Boolean(error)}
-      errorMessage={error ?? "Nu s-au putut încărca datele de profil"}
+      errorMessage={error ?? t("profile", "failedToLoadProfile")}
       isEmpty={!data}
-      emptyTitle="Nu există date de profil"
-      emptyDescription="Informațiile profilului nu sunt disponibile."
+      emptyTitle={t("profile", "noProfileData")}
+      emptyDescription={t("profile", "profileDataUnavailable")}
     >
-      <div className="space-y-6">
-        <section className="grid gap-5 sm:grid-cols-2">
-          {PROFILE_CARDS.map((card) => (
-            <CardShell key={card.key} accent={card.accent}>
-              <StatCard
-                title={card.title}
-                icon={card.icon}
-                onClick={() => router.push(card.href)}
-                hideValue // 👈 IMPORTANT
-              />
-            </CardShell>
-          ))}
-        </section>
-      </div>
+      <section className="grid gap-5 sm:grid-cols-2">
+        {cards.map((card) => (
+          <CardShell key={card.key} accent={card.accent}>
+            <StatCard
+              title={card.title}
+              icon={card.icon}
+              onClick={() => router.push(card.href)}
+            />
+          </CardShell>
+        ))}
+      </section>
     </DataStateBoundary>
   );
 }

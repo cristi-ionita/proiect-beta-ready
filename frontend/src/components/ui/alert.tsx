@@ -2,6 +2,8 @@
 
 import { TriangleAlert, Info, CheckCircle, AlertTriangle } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
 type AlertVariant = "error" | "warning" | "info" | "success";
 
 type AlertProps = {
@@ -10,15 +12,14 @@ type AlertProps = {
   className?: string;
 };
 
+const baseStyles =
+  "flex items-start gap-3 rounded-2xl border p-4 text-sm backdrop-blur-md";
+
 const variantStyles: Record<AlertVariant, string> = {
-  error:
-    "border-red-400/20 bg-red-500/10 text-red-100 shadow-[0_20px_50px_rgba(0,0,0,0.28)]",
-  warning:
-    "border-amber-400/20 bg-amber-500/10 text-amber-100 shadow-[0_20px_50px_rgba(0,0,0,0.28)]",
-  info:
-    "border-blue-400/20 bg-blue-500/10 text-blue-100 shadow-[0_20px_50px_rgba(0,0,0,0.28)]",
-  success:
-    "border-emerald-400/20 bg-emerald-500/10 text-emerald-100 shadow-[0_20px_50px_rgba(0,0,0,0.28)]",
+  error: "border-rose-400/20 bg-rose-500/10 text-rose-100",
+  warning: "border-amber-400/20 bg-amber-500/10 text-amber-100",
+  info: "border-blue-400/20 bg-blue-500/10 text-blue-100",
+  success: "border-emerald-400/20 bg-emerald-500/10 text-emerald-100",
 };
 
 const iconMap: Record<AlertVariant, React.ReactNode> = {
@@ -29,7 +30,7 @@ const iconMap: Record<AlertVariant, React.ReactNode> = {
 };
 
 const iconWrapperStyles: Record<AlertVariant, string> = {
-  error: "bg-red-500/20 text-red-200",
+  error: "bg-rose-500/20 text-rose-200",
   warning: "bg-amber-500/20 text-amber-200",
   info: "bg-blue-500/20 text-blue-200",
   success: "bg-emerald-500/20 text-emerald-200",
@@ -41,13 +42,12 @@ export default function Alert({
   className,
 }: AlertProps) {
   return (
-    <div
-      className={`flex items-start gap-3 rounded-[28px] border p-4 text-sm backdrop-blur-xl ${variantStyles[variant]} ${
-        className ?? ""
-      }`}
-    >
+    <div className={cn(baseStyles, variantStyles[variant], className)}>
       <span
-        className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl ${iconWrapperStyles[variant]}`}
+        className={cn(
+          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
+          iconWrapperStyles[variant]
+        )}
       >
         {iconMap[variant]}
       </span>

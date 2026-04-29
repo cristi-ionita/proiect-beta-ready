@@ -126,7 +126,7 @@ class VehicleAssignmentService:
         db: AsyncSession,
         user: User,
         vehicle: Vehicle,
-        shift_number: int,
+        shift_number: int | None = None,
     ) -> VehicleAssignment:
         if user.role != UserRole.EMPLOYEE.value:
             raise HTTPException(
@@ -152,7 +152,7 @@ class VehicleAssignmentService:
                 detail="Vehicle is not available for assignment.",
             )
 
-        if shift_number <= 0:
+        if shift_number is not None and shift_number <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Shift number must be greater than 0.",

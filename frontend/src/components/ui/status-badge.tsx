@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+
 type StatusVariant = "success" | "warning" | "danger" | "neutral" | "info";
 type StatusSize = "sm" | "md";
 
@@ -12,21 +14,12 @@ type StatusBadgeProps = {
   className?: string;
 };
 
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
-
 const variantClasses: Record<StatusVariant, string> = {
-  success:
-    "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200",
-  warning:
-    "bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200",
-  danger:
-    "bg-rose-100 text-rose-700 ring-1 ring-inset ring-rose-200",
-  neutral:
-    "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200",
-  info:
-    "bg-sky-100 text-sky-700 ring-1 ring-inset ring-sky-200",
+  success: "border-emerald-400/20 bg-emerald-500/10 text-emerald-200",
+  warning: "border-amber-400/20 bg-amber-500/10 text-amber-200",
+  danger: "border-rose-400/20 bg-rose-500/10 text-rose-200",
+  neutral: "border-white/10 bg-white/10 text-slate-200",
+  info: "border-blue-400/20 bg-blue-500/10 text-blue-200",
 };
 
 const sizeClasses: Record<StatusSize, string> = {
@@ -43,7 +36,7 @@ export default function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full font-medium whitespace-nowrap",
+        "inline-flex items-center whitespace-nowrap rounded-full border font-medium",
         variantClasses[variant],
         sizeClasses[size],
         className

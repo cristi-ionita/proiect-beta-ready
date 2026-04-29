@@ -1,99 +1,95 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, XCircle } from "lucide-react";
+import { ArrowLeft, CarFront, Clock, UserRound, XCircle } from "lucide-react";
 
-import SectionCard from "@/components/ui/section-card";
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
+import ListChip from "@/components/patterns/list-chip";
+import ListRow from "@/components/patterns/list-row";
 import Button from "@/components/ui/button";
-
-import { getRejectedAssignments } from "@/services/assignments.api";
-import type { AssignmentItem } from "@/types/assignment.types";
+import SectionCard from "@/components/ui/section-card";
+import StatusBadge from "@/components/ui/status-badge";
+import { useAdminAssignments } from "@/hooks/admin/use-admin-assignments";
+import { useSafeI18n } from "@/hooks/use-safe-i18n";
+import { formatDate } from "@/lib/utils";
 
 export default function AdminRejectedAssignmentsScreen() {
   const router = useRouter();
+  const { t, locale } = useSafeI18n();
 
-  const [data, setData] = useState<AssignmentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { assignments, loading, error } = useAdminAssignments({
+    errorMessage: t("assignments", "failedToLoad"),
+  });
 
-  async function load() {
-    try {
-      setLoading(true);
-      setError("");
-
-      const res = await getRejectedAssignments();
-      setData(Array.isArray(res) ? res : []);
-    } catch {
-      setError("Nu s-au putut încărca alocările refuzate.");
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void load();
-  }, []);
+  const rejectedAssignments = useMemo(
+    () => assignments.filter((assignment) => assignment.status === "rejected"),
+    [assignments]
+  );
 
   return (
-    <DataStateBoundary
-      isLoading={loading}
-      isError={Boolean(error)}
-      errorMessage={error}
-    >
-      <div className="space-y-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => router.push("/admin/assignments")}
-          className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white hover:bg-white/15"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Înapoi
-        </Button>
+    <div className="space-y-4">
+      <Button
+        type="button"
+        variant="back"
+        onClick={() => router.push("/admin/assignments")}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t("common", "back")}
+      </Button>
 
-        <SectionCard
-          title="Alocări refuzate"
-          icon={<XCircle className="h-5 w-5" />}
+      <SectionCard
+        title={t("assignments", "rejected")}
+        icon={<XCircle className="h-5 w-5" />}
+      >
+        <DataStateBoundary
+          isLoading={loading}
+          isError={Boolean(error)}
+          errorMessage={error ?? t("assignments", "failedToLoad")}
+          isEmpty={rejectedAssignments.length === 0}
+          emptyTitle={t("assignments", "noRejected")}
         >
-          {data.length === 0 ? (
-            <p className="text-sm text-slate-400">
-              Nu există alocări refuzate.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {data.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between gap-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3"
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-white">
-                      {item.user_name}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {item.vehicle_brand} {item.vehicle_model} —{" "}
-                      {item.vehicle_license_plate}
-                    </p>
-                  </div>
+          <div className="space-y-2.5">
+            {rejectedAssignments.map((assignment) => (
+              <ListRow
+                key={assignment.id}
+                leading={<UserRound className="h-4 w-4" />}
+                title={assignment.user_name || `#${assignment.user_id}`}
+                badge={
+                  <StatusBadge
+                    label={t("assignments", "rejected")}
+                    variant="danger"
+                  />
+                }
+                meta={
+                  <>
+                    <ListChip icon={<UserRound className="h-3 w-3" />}>
+                      {t("assignments", "shift")}{" "}
+                      {assignment.shift_number || "—"}
+                    </ListChip>
 
-                  <div className="text-right text-xs text-slate-400">
-                    <p>Tură: {item.shift_number}</p>
-                    <p>
-                      Refuzată la:{" "}
-                      {item.ended_at
-                        ? new Date(item.ended_at).toLocaleString()
+                    <ListChip
+                      icon={<CarFront className="h-3 w-3" />}
+                      variant="blue"
+                    >
+                      {assignment.vehicle_brand} {assignment.vehicle_model} —{" "}
+                      {assignment.vehicle_license_plate ||
+                        `#${assignment.vehicle_id}`}
+                    </ListChip>
+
+                    <ListChip icon={<Clock className="h-3 w-3" />}>
+                      {t("assignments", "rejectedAt")}:{" "}
+                      {assignment.ended_at
+                        ? formatDate(assignment.ended_at, locale)
                         : "—"}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-      </div>
-    </DataStateBoundary>
+                    </ListChip>
+                  </>
+                }
+              />
+            ))}
+          </div>
+        </DataStateBoundary>
+      </SectionCard>
+    </div>
   );
 }

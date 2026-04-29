@@ -34,20 +34,8 @@ class Vehicle(Base):
             name="ck_vehicles_license_plate_not_blank",
         ),
         CheckConstraint(
-            "year >= 1900",
-            name="ck_vehicles_year_min_1900",
-        ),
-        CheckConstraint(
-            "year <= 2100",
-            name="ck_vehicles_year_max_2100",
-        ),
-        CheckConstraint(
             "current_mileage >= 0",
             name="ck_vehicles_current_mileage_non_negative",
-        ),
-        CheckConstraint(
-            "vin IS NULL OR char_length(trim(vin)) > 0",
-            name="ck_vehicles_vin_not_blank_if_present",
         ),
     )
 
@@ -69,19 +57,6 @@ class Vehicle(Base):
         String(20),
         unique=True,
         nullable=False,
-        index=True,
-    )
-
-    year: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        index=True,
-    )
-
-    vin: Mapped[str | None] = mapped_column(
-        String(50),
-        unique=True,
-        nullable=True,
         index=True,
     )
 

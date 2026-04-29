@@ -1,8 +1,8 @@
 """clean init
 
-Revision ID: 6f1bda129984
+Revision ID: 5b7737d621f3
 Revises: 
-Create Date: 2026-04-20 22:51:53.824854
+Create Date: 2026-04-27 02:41:56.363244
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '6f1bda129984'
+revision: str = '5b7737d621f3'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -38,6 +38,8 @@ def upgrade() -> None:
     sa.Column('rejected_by_user_id', sa.Integer(), nullable=True),
     sa.Column('rejection_reason', sa.String(length=500), nullable=True),
     sa.Column('last_login_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('password_reset_token_hash', sa.String(length=255), nullable=True),
+    sa.Column('password_reset_expires_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.CheckConstraint("role IN ('employee', 'admin', 'mechanic')", name='ck_users_role_valid'),
@@ -58,6 +60,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_users_full_name'), 'users', ['full_name'], unique=False)
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_index(op.f('ix_users_is_active'), 'users', ['is_active'], unique=False)
+    op.create_index(op.f('ix_users_password_reset_token_hash'), 'users', ['password_reset_token_hash'], unique=False)
     op.create_index(op.f('ix_users_rejected_by_user_id'), 'users', ['rejected_by_user_id'], unique=False)
     op.create_index(op.f('ix_users_role'), 'users', ['role'], unique=False)
     op.create_index(op.f('ix_users_status'), 'users', ['status'], unique=False)
@@ -68,8 +71,6 @@ def upgrade() -> None:
     sa.Column('brand', sa.String(length=100), nullable=False),
     sa.Column('model', sa.String(length=100), nullable=False),
     sa.Column('license_plate', sa.String(length=20), nullable=False),
-    sa.Column('year', sa.Integer(), nullable=False),
-    sa.Column('vin', sa.String(length=50), nullable=True),
     sa.Column('status', sa.Enum('available', 'assigned', 'in_service', 'out_of_service', name='vehicle_status'), server_default='available', nullable=False),
     sa.Column('current_mileage', sa.Integer(), server_default='0', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -78,9 +79,6 @@ def upgrade() -> None:
     sa.CheckConstraint('char_length(trim(license_plate)) > 0', name='ck_vehicles_license_plate_not_blank'),
     sa.CheckConstraint('char_length(trim(model)) > 0', name='ck_vehicles_model_not_blank'),
     sa.CheckConstraint('current_mileage >= 0', name='ck_vehicles_current_mileage_non_negative'),
-    sa.CheckConstraint('vin IS NULL OR char_length(trim(vin)) > 0', name='ck_vehicles_vin_not_blank_if_present'),
-    sa.CheckConstraint('year <= 2100', name='ck_vehicles_year_max_2100'),
-    sa.CheckConstraint('year >= 1900', name='ck_vehicles_year_min_1900'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_vehicles_brand'), 'vehicles', ['brand'], unique=False)
@@ -89,13 +87,11 @@ def upgrade() -> None:
     op.create_index(op.f('ix_vehicles_license_plate'), 'vehicles', ['license_plate'], unique=True)
     op.create_index(op.f('ix_vehicles_model'), 'vehicles', ['model'], unique=False)
     op.create_index(op.f('ix_vehicles_status'), 'vehicles', ['status'], unique=False)
-    op.create_index(op.f('ix_vehicles_vin'), 'vehicles', ['vin'], unique=True)
-    op.create_index(op.f('ix_vehicles_year'), 'vehicles', ['year'], unique=False)
     op.create_table('documents',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('uploaded_by', sa.Integer(), nullable=True),
-    sa.Column('type', sa.Enum('contract', 'payslip', 'id_card', 'driver_license', 'medical_certificate', 'other', name='document_type'), nullable=False),
+    sa.Column('type', sa.Enum('contract', 'payslip', 'id_card', 'passport', 'driver_license', 'tax_number', 'bank_card', 'medical_certificate', 'other', name='document_type'), nullable=False),
     sa.Column('category', sa.Enum('company', 'personal', name='document_category'), nullable=False),
     sa.Column('status', sa.Enum('active', 'expired', 'archived', name='document_status'), server_default='active', nullable=False),
     sa.Column('title', sa.String(length=255), nullable=True),
@@ -184,19 +180,66 @@ def upgrade() -> None:
     op.create_index(op.f('ix_leave_requests_start_date'), 'leave_requests', ['start_date'], unique=False)
     op.create_index(op.f('ix_leave_requests_status'), 'leave_requests', ['status'], unique=False)
     op.create_index(op.f('ix_leave_requests_user_id'), 'leave_requests', ['user_id'], unique=False)
+    op.create_table('registration_requests',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('full_name', sa.String(length=150), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=True),
+    sa.Column('unique_code', sa.String(length=50), nullable=True),
+    sa.Column('username', sa.String(length=50), nullable=True),
+    sa.Column('shift_number', sa.String(length=20), nullable=True),
+    sa.Column('password_hash', sa.String(length=255), nullable=False),
+    sa.Column('role', sa.String(length=20), server_default='employee', nullable=False),
+    sa.Column('status', sa.String(length=20), server_default='pending', nullable=False),
+    sa.Column('email_verification_token', sa.String(length=255), nullable=True),
+    sa.Column('email_verification_sent_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('email_verification_expires_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('email_verified_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('approved_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('approved_by_user_id', sa.Integer(), nullable=True),
+    sa.Column('rejected_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('rejected_by_user_id', sa.Integer(), nullable=True),
+    sa.Column('rejection_reason', sa.String(length=500), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.CheckConstraint("role IN ('employee', 'mechanic')", name='ck_regreq_role_valid'),
+    sa.CheckConstraint("status IN ('pending', 'approved', 'rejected')", name='ck_regreq_status_valid'),
+    sa.CheckConstraint('char_length(trim(full_name)) > 0', name='ck_regreq_full_name_not_blank'),
+    sa.CheckConstraint('char_length(trim(password_hash)) > 0', name='ck_regreq_password_hash_not_blank'),
+    sa.CheckConstraint('email IS NULL OR char_length(trim(email)) > 0', name='ck_regreq_email_not_blank'),
+    sa.CheckConstraint('email_verification_token IS NULL OR char_length(trim(email_verification_token)) > 0', name='ck_regreq_email_verification_token_not_blank'),
+    sa.CheckConstraint('rejection_reason IS NULL OR char_length(trim(rejection_reason)) > 0', name='ck_regreq_rejection_reason_not_blank'),
+    sa.CheckConstraint('shift_number IS NULL OR char_length(trim(shift_number)) > 0', name='ck_regreq_shift_not_blank'),
+    sa.CheckConstraint('unique_code IS NULL OR char_length(trim(unique_code)) > 0', name='ck_regreq_unique_code_not_blank'),
+    sa.CheckConstraint('username IS NULL OR char_length(trim(username)) > 0', name='ck_regreq_username_not_blank'),
+    sa.ForeignKeyConstraint(['approved_by_user_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['rejected_by_user_id'], ['users.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_registration_requests_approved_by_user_id'), 'registration_requests', ['approved_by_user_id'], unique=False)
+    op.create_index(op.f('ix_registration_requests_email'), 'registration_requests', ['email'], unique=True)
+    op.create_index(op.f('ix_registration_requests_email_verification_token'), 'registration_requests', ['email_verification_token'], unique=True)
+    op.create_index(op.f('ix_registration_requests_full_name'), 'registration_requests', ['full_name'], unique=False)
+    op.create_index(op.f('ix_registration_requests_id'), 'registration_requests', ['id'], unique=False)
+    op.create_index(op.f('ix_registration_requests_rejected_by_user_id'), 'registration_requests', ['rejected_by_user_id'], unique=False)
+    op.create_index(op.f('ix_registration_requests_role'), 'registration_requests', ['role'], unique=False)
+    op.create_index(op.f('ix_registration_requests_status'), 'registration_requests', ['status'], unique=False)
+    op.create_index(op.f('ix_registration_requests_unique_code'), 'registration_requests', ['unique_code'], unique=True)
+    op.create_index(op.f('ix_registration_requests_username'), 'registration_requests', ['username'], unique=True)
     op.create_table('vehicle_assignments',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('vehicle_id', sa.Integer(), nullable=False),
-    sa.Column('status', sa.Enum('active', 'closed', name='assignment_status'), server_default='active', nullable=False),
+    sa.Column('shift_number', sa.Integer(), nullable=False),
+    sa.Column('status', sa.Enum('pending', 'active', 'rejected', 'closed', name='assignment_status'), server_default='pending', nullable=False),
     sa.Column('started_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('ended_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('notes', sa.String(length=500), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.CheckConstraint("(status = 'active' AND ended_at IS NULL) OR (status = 'closed' AND ended_at IS NOT NULL)", name='ck_vehicle_assignments_status_matches_ended_at'),
+    sa.CheckConstraint("(status IN ('pending', 'active', 'rejected') AND ended_at IS NULL) OR (status = 'closed' AND ended_at IS NOT NULL)", name='ck_vehicle_assignments_status_matches_ended_at'),
     sa.CheckConstraint('ended_at IS NULL OR ended_at >= started_at', name='ck_vehicle_assignments_ended_at_after_started_at'),
     sa.CheckConstraint('notes IS NULL OR char_length(trim(notes)) > 0', name='ck_vehicle_assignments_notes_not_blank_when_present'),
+    sa.CheckConstraint('shift_number > 0', name='ck_vehicle_assignments_shift_number_positive'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='RESTRICT'),
     sa.ForeignKeyConstraint(['vehicle_id'], ['vehicles.id'], ondelete='RESTRICT'),
     sa.PrimaryKeyConstraint('id')
@@ -204,12 +247,29 @@ def upgrade() -> None:
     op.create_index(op.f('ix_vehicle_assignments_created_at'), 'vehicle_assignments', ['created_at'], unique=False)
     op.create_index(op.f('ix_vehicle_assignments_ended_at'), 'vehicle_assignments', ['ended_at'], unique=False)
     op.create_index(op.f('ix_vehicle_assignments_id'), 'vehicle_assignments', ['id'], unique=False)
+    op.create_index(op.f('ix_vehicle_assignments_shift_number'), 'vehicle_assignments', ['shift_number'], unique=False)
     op.create_index(op.f('ix_vehicle_assignments_started_at'), 'vehicle_assignments', ['started_at'], unique=False)
     op.create_index(op.f('ix_vehicle_assignments_status'), 'vehicle_assignments', ['status'], unique=False)
     op.create_index(op.f('ix_vehicle_assignments_user_id'), 'vehicle_assignments', ['user_id'], unique=False)
     op.create_index(op.f('ix_vehicle_assignments_vehicle_id'), 'vehicle_assignments', ['vehicle_id'], unique=False)
-    op.create_index('ux_vehicle_assignments_active_user', 'vehicle_assignments', ['user_id'], unique=True, postgresql_where=sa.text("status = 'active' AND ended_at IS NULL"))
-    op.create_index('ux_vehicle_assignments_active_vehicle', 'vehicle_assignments', ['vehicle_id'], unique=True, postgresql_where=sa.text("status = 'active' AND ended_at IS NULL"))
+    op.create_index('ux_vehicle_assignments_active_user', 'vehicle_assignments', ['user_id'], unique=True, postgresql_where=sa.text("status IN ('pending', 'active') AND ended_at IS NULL"))
+    op.create_index('ux_vehicle_assignments_active_vehicle', 'vehicle_assignments', ['vehicle_id'], unique=True, postgresql_where=sa.text("status IN ('pending', 'active') AND ended_at IS NULL"))
+    op.create_table('vehicle_photos',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('vehicle_id', sa.Integer(), nullable=False),
+    sa.Column('type', sa.Enum('exterior', 'interior', 'damage', 'registration', name='vehicle_photo_type'), nullable=False),
+    sa.Column('file_name', sa.String(length=255), nullable=False),
+    sa.Column('file_path', sa.String(length=500), nullable=False),
+    sa.Column('mime_type', sa.String(length=100), nullable=False),
+    sa.Column('file_size', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['vehicle_id'], ['vehicles.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_vehicle_photos_created_at'), 'vehicle_photos', ['created_at'], unique=False)
+    op.create_index(op.f('ix_vehicle_photos_id'), 'vehicle_photos', ['id'], unique=False)
+    op.create_index(op.f('ix_vehicle_photos_type'), 'vehicle_photos', ['type'], unique=False)
+    op.create_index(op.f('ix_vehicle_photos_vehicle_id'), 'vehicle_photos', ['vehicle_id'], unique=False)
     op.create_table('vehicle_handover_reports',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('assignment_id', sa.Integer(), nullable=False),
@@ -293,12 +353,28 @@ def upgrade() -> None:
     op.create_index(op.f('ix_vehicle_issues_started_at'), 'vehicle_issues', ['started_at'], unique=False)
     op.create_index(op.f('ix_vehicle_issues_status'), 'vehicle_issues', ['status'], unique=False)
     op.create_index(op.f('ix_vehicle_issues_vehicle_id'), 'vehicle_issues', ['vehicle_id'], unique=False)
+    op.create_table('vehicle_issue_photos',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('issue_id', sa.Integer(), nullable=False),
+    sa.Column('file_name', sa.String(length=255), nullable=False),
+    sa.Column('file_path', sa.String(length=500), nullable=False),
+    sa.Column('mime_type', sa.String(length=100), nullable=False),
+    sa.Column('file_size', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['issue_id'], ['vehicle_issues.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_vehicle_issue_photos_id'), 'vehicle_issue_photos', ['id'], unique=False)
+    op.create_index(op.f('ix_vehicle_issue_photos_issue_id'), 'vehicle_issue_photos', ['issue_id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index(op.f('ix_vehicle_issue_photos_issue_id'), table_name='vehicle_issue_photos')
+    op.drop_index(op.f('ix_vehicle_issue_photos_id'), table_name='vehicle_issue_photos')
+    op.drop_table('vehicle_issue_photos')
     op.drop_index(op.f('ix_vehicle_issues_vehicle_id'), table_name='vehicle_issues')
     op.drop_index(op.f('ix_vehicle_issues_status'), table_name='vehicle_issues')
     op.drop_index(op.f('ix_vehicle_issues_started_at'), table_name='vehicle_issues')
@@ -315,16 +391,33 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_vehicle_handover_reports_created_at'), table_name='vehicle_handover_reports')
     op.drop_index(op.f('ix_vehicle_handover_reports_assignment_id'), table_name='vehicle_handover_reports')
     op.drop_table('vehicle_handover_reports')
-    op.drop_index('ux_vehicle_assignments_active_vehicle', table_name='vehicle_assignments', postgresql_where=sa.text("status = 'active' AND ended_at IS NULL"))
-    op.drop_index('ux_vehicle_assignments_active_user', table_name='vehicle_assignments', postgresql_where=sa.text("status = 'active' AND ended_at IS NULL"))
+    op.drop_index(op.f('ix_vehicle_photos_vehicle_id'), table_name='vehicle_photos')
+    op.drop_index(op.f('ix_vehicle_photos_type'), table_name='vehicle_photos')
+    op.drop_index(op.f('ix_vehicle_photos_id'), table_name='vehicle_photos')
+    op.drop_index(op.f('ix_vehicle_photos_created_at'), table_name='vehicle_photos')
+    op.drop_table('vehicle_photos')
+    op.drop_index('ux_vehicle_assignments_active_vehicle', table_name='vehicle_assignments', postgresql_where=sa.text("status IN ('pending', 'active') AND ended_at IS NULL"))
+    op.drop_index('ux_vehicle_assignments_active_user', table_name='vehicle_assignments', postgresql_where=sa.text("status IN ('pending', 'active') AND ended_at IS NULL"))
     op.drop_index(op.f('ix_vehicle_assignments_vehicle_id'), table_name='vehicle_assignments')
     op.drop_index(op.f('ix_vehicle_assignments_user_id'), table_name='vehicle_assignments')
     op.drop_index(op.f('ix_vehicle_assignments_status'), table_name='vehicle_assignments')
     op.drop_index(op.f('ix_vehicle_assignments_started_at'), table_name='vehicle_assignments')
+    op.drop_index(op.f('ix_vehicle_assignments_shift_number'), table_name='vehicle_assignments')
     op.drop_index(op.f('ix_vehicle_assignments_id'), table_name='vehicle_assignments')
     op.drop_index(op.f('ix_vehicle_assignments_ended_at'), table_name='vehicle_assignments')
     op.drop_index(op.f('ix_vehicle_assignments_created_at'), table_name='vehicle_assignments')
     op.drop_table('vehicle_assignments')
+    op.drop_index(op.f('ix_registration_requests_username'), table_name='registration_requests')
+    op.drop_index(op.f('ix_registration_requests_unique_code'), table_name='registration_requests')
+    op.drop_index(op.f('ix_registration_requests_status'), table_name='registration_requests')
+    op.drop_index(op.f('ix_registration_requests_role'), table_name='registration_requests')
+    op.drop_index(op.f('ix_registration_requests_rejected_by_user_id'), table_name='registration_requests')
+    op.drop_index(op.f('ix_registration_requests_id'), table_name='registration_requests')
+    op.drop_index(op.f('ix_registration_requests_full_name'), table_name='registration_requests')
+    op.drop_index(op.f('ix_registration_requests_email_verification_token'), table_name='registration_requests')
+    op.drop_index(op.f('ix_registration_requests_email'), table_name='registration_requests')
+    op.drop_index(op.f('ix_registration_requests_approved_by_user_id'), table_name='registration_requests')
+    op.drop_table('registration_requests')
     op.drop_index(op.f('ix_leave_requests_user_id'), table_name='leave_requests')
     op.drop_index(op.f('ix_leave_requests_status'), table_name='leave_requests')
     op.drop_index(op.f('ix_leave_requests_start_date'), table_name='leave_requests')
@@ -349,8 +442,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_documents_created_at'), table_name='documents')
     op.drop_index(op.f('ix_documents_category'), table_name='documents')
     op.drop_table('documents')
-    op.drop_index(op.f('ix_vehicles_year'), table_name='vehicles')
-    op.drop_index(op.f('ix_vehicles_vin'), table_name='vehicles')
     op.drop_index(op.f('ix_vehicles_status'), table_name='vehicles')
     op.drop_index(op.f('ix_vehicles_model'), table_name='vehicles')
     op.drop_index(op.f('ix_vehicles_license_plate'), table_name='vehicles')
@@ -363,6 +454,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_status'), table_name='users')
     op.drop_index(op.f('ix_users_role'), table_name='users')
     op.drop_index(op.f('ix_users_rejected_by_user_id'), table_name='users')
+    op.drop_index(op.f('ix_users_password_reset_token_hash'), table_name='users')
     op.drop_index(op.f('ix_users_is_active'), table_name='users')
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_index(op.f('ix_users_full_name'), table_name='users')

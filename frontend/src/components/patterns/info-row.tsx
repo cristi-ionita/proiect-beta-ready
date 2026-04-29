@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
+import { cn } from "@/lib/utils";
 
 type InfoRowProps = {
   icon: ReactNode;
@@ -22,7 +20,7 @@ export default function InfoRow({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-white/10 bg-white/10 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md",
+        "rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-md",
         className
       )}
     >

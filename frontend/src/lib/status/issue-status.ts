@@ -3,42 +3,38 @@ import StatusBadge from "@/components/ui/status-badge";
 
 type StatusVariant = ComponentProps<typeof StatusBadge>["variant"];
 
-/**
- * Normalize backend status → UI label
- */
+type IssueStatusConfig = {
+  label: string;
+  variant: StatusVariant;
+};
+
+const ISSUE_STATUS_MAP: Record<string, IssueStatusConfig> = {
+  open: {
+    label: "Open",
+    variant: "warning",
+  },
+  in_progress: {
+    label: "In progress",
+    variant: "info",
+  },
+  resolved: {
+    label: "Resolved",
+    variant: "success",
+  },
+  closed: {
+    label: "Closed",
+    variant: "neutral",
+  },
+  rejected: {
+    label: "Rejected",
+    variant: "danger",
+  },
+};
+
 export function getIssueStatusLabel(status: string): string {
-  switch (status) {
-    case "open":
-      return "Open";
-    case "in_progress":
-      return "In progress";
-    case "resolved":
-      return "Resolved";
-    case "closed":
-      return "Closed";
-    case "rejected":
-      return "Rejected";
-    default:
-      return "Unknown";
-  }
+  return ISSUE_STATUS_MAP[status]?.label ?? "Unknown";
 }
 
-/**
- * Map backend status → badge variant
- */
 export function getIssueStatusVariant(status: string): StatusVariant {
-  switch (status) {
-    case "open":
-      return "warning";
-    case "in_progress":
-      return "info";
-    case "resolved":
-      return "success";
-    case "closed":
-      return "neutral";
-    case "rejected":
-      return "danger";
-    default:
-      return "neutral";
-  }
+  return ISSUE_STATUS_MAP[status]?.variant ?? "neutral";
 }

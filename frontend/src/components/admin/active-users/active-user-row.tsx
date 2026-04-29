@@ -2,9 +2,10 @@
 
 import { CarFront, UserRound } from "lucide-react";
 
-import Card from "@/components/ui/card";
+import ListChip from "@/components/patterns/list-chip";
+import ListRow from "@/components/patterns/list-row";
+import StatusBadge from "@/components/ui/status-badge";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
-import { cn } from "@/lib/utils";
 
 export type ActiveUserRowData = {
   id: number;
@@ -20,48 +21,33 @@ type ActiveUserRowProps = {
 
 export default function ActiveUserRow({ user, index }: ActiveUserRowProps) {
   const { t } = useSafeI18n();
+  const fallback = "—";
 
   return (
-    <Card className="p-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-black text-white">
-            <span className="text-sm font-semibold">{index + 1}</span>
-          </div>
+    <ListRow
+      leading={<span className="text-xs font-semibold">{index + 1}</span>}
+      title={user.full_name || fallback}
+      badge={
+        <StatusBadge
+          label={t("common", "active")}
+          variant="success"
+          size="sm"
+        />
+      }
+      meta={
+        <>
+          <ListChip icon={<UserRound className="h-3 w-3" />}>
+            {user.shift_number || fallback}
+          </ListChip>
 
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="truncate text-base font-semibold tracking-tight text-white">
-                {user.full_name}
-              </p>
-
-              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                {t("common", "active")}
-              </span>
-            </div>
-
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-slate-200">
-                <UserRound className="h-3.5 w-3.5 text-slate-300" />
-                {t("common", "shift")}: {user.shift_number || "—"}
-              </span>
-
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium",
-                  user.vehicle_license_plate
-                    ? "border border-blue-200 bg-blue-50 text-blue-700"
-                    : "border border-white/10 bg-white/10 text-slate-300"
-                )}
-              >
-                <CarFront className="h-3.5 w-3.5" />
-                {t("common", "vehicle")}:{" "}
-                {user.vehicle_license_plate || "—"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Card>
+          <ListChip
+            icon={<CarFront className="h-3 w-3" />}
+            variant={user.vehicle_license_plate ? "blue" : "default"}
+          >
+            {user.vehicle_license_plate || fallback}
+          </ListChip>
+        </>
+      }
+    />
   );
 }

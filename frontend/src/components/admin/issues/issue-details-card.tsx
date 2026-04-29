@@ -1,267 +1,236 @@
 "use client";
 
-import type { ReactNode } from "react";
-import {
-  CalendarDays,
-  CarFront,
-  Clock3,
-  Settings2,
-  TriangleAlert,
-  UserRound,
-  Wrench,
-} from "lucide-react";
+import { CalendarDays, CarFront, ImageIcon, UserRound } from "lucide-react";
 
+import ListChip from "@/components/patterns/list-chip";
+import ListRow from "@/components/patterns/list-row";
 import SectionCard from "@/components/ui/section-card";
 import StatusBadge from "@/components/ui/status-badge";
-
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
-import { cn, formatDate } from "@/lib/utils";
 import {
   getIssueStatusLabel,
   getIssueStatusVariant,
 } from "@/lib/status/issue-status";
-
+import { formatDate } from "@/lib/utils";
 import type { IssueItem } from "@/types/issue.types";
-import type { Locale } from "@/lib/i18n/dictionaries";
 
-type IssueDetailsCardProps = {
+type Props = {
   issue: IssueItem;
-  locale: Locale;
+  locale: string;
 };
 
-function getPriorityLabel(priority?: string | null) {
-  switch ((priority || "").toLowerCase()) {
-    case "low":
-      return "LOW";
-    case "medium":
-      return "MEDIUM";
-    case "high":
-      return "HIGH";
-    case "critical":
-      return "CRITICAL";
-    default:
-      return "—";
-  }
+type IssuePhoto = {
+  id?: number | string;
+  url?: string | null;
+  file_url?: string | null;
+  path?: string | null;
+};
+
+type IssueDetailsExtra = IssueItem & {
+  brakes?: boolean | null;
+  tires?: boolean | null;
+  oil?: boolean | null;
+
+  service_in_km?: string | number | null;
+  scheduled_for?: string | null;
+  scheduled_location?: string | null;
+  dashboard_checks?: string | null;
+  other_problems?: string | null;
+
+  reported_by_name?: string | null;
+  reporter_name?: string | null;
+  created_by_name?: string | null;
+
+  photos?: IssuePhoto[] | null;
+  service_photos?: IssuePhoto[] | null;
+  dashboard_photos?: IssuePhoto[] | null;
+  other_photos?: IssuePhoto[] | null;
+};
+
+function hasText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
-function getPriorityVariant(priority?: string | null) {
-  switch ((priority || "").toLowerCase()) {
-    case "low":
-      return "neutral";
-    case "medium":
-      return "info";
-    case "high":
-      return "warning";
-    case "critical":
-      return "danger";
-    default:
-      return "neutral";
-  }
+function getPhotoUrl(photo: IssuePhoto): string | null {
+  return photo.url || photo.file_url || photo.path || null;
 }
 
-export default function IssueDetailsCard({
-  issue,
-}: IssueDetailsCardProps) {
-  const { t, localeTag } = useSafeI18n();
+export default function IssueDetailsCard({ issue, locale }: Props) {
+  const { t } = useSafeI18n();
+  const details = issue as IssueDetailsExtra;
+  const fallback = "—";
 
-  function yesNo(value?: boolean | null) {
-    return value ? t("common", "yes") : t("common", "no");
-  }
+  const reporterName =
+    details.reported_by_name ||
+    details.reporter_name ||
+    details.created_by_name ||
+    fallback;
+
+  const reportedItems = [
+    details.brakes
+      ? {
+          key: "brakes",
+          label: t("issues", "brakes"),
+          value: t("common", "yes"),
+        }
+      : null,
+
+    details.tires
+      ? {
+          key: "tires",
+          label: t("issues", "tires"),
+          value: t("common", "yes"),
+        }
+      : null,
+
+    details.oil
+      ? {
+          key: "oil",
+          label: t("issues", "oil"),
+          value: t("common", "yes"),
+        }
+      : null,
+
+    details.service_in_km
+      ? {
+          key: "service_in_km",
+          label: t("issues", "serviceInKm"),
+          value: String(details.service_in_km),
+        }
+      : null,
+
+    hasText(details.scheduled_for)
+      ? {
+          key: "scheduled_for",
+          label: t("issues", "scheduledFor"),
+          value: formatDate(details.scheduled_for, locale),
+        }
+      : null,
+
+    hasText(details.scheduled_location)
+      ? {
+          key: "scheduled_location",
+          label: t("issues", "scheduledLocation"),
+          value: details.scheduled_location,
+        }
+      : null,
+
+    hasText(details.dashboard_checks)
+      ? {
+          key: "dashboard_checks",
+          label: t("issues", "dashboardChecks"),
+          value: details.dashboard_checks,
+        }
+      : null,
+
+    hasText(details.other_problems)
+      ? {
+          key: "other_problems",
+          label: t("issues", "otherProblems"),
+          value: details.other_problems,
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    key: string;
+    label: string;
+    value: string;
+  }>;
+
+  const photos = [
+    ...(details.photos ?? []),
+    ...(details.service_photos ?? []),
+    ...(details.dashboard_photos ?? []),
+    ...(details.other_photos ?? []),
+  ].filter((photo) => Boolean(getPhotoUrl(photo)));
 
   return (
-    <SectionCard
-      title={`${t("issues", "details")} #${issue.id}`}
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-4">
+      <SectionCard
+        title={t("issues", "details")}
+        actions={
           <StatusBadge
             label={getIssueStatusLabel(issue.status)}
             variant={getIssueStatusVariant(issue.status)}
-            size="md"
           />
-
-          {issue.priority ? (
-            <StatusBadge
-              label={getPriorityLabel(issue.priority)}
-              variant={getPriorityVariant(issue.priority)}
-              size="md"
-            />
-          ) : null}
-        </div>
-      }
-    >
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <InfoTile
-            icon={<CarFront className="h-4 w-4 text-slate-300" />}
-            label={t("issues", "vehiclePlate")}
-            value={issue.vehicle_license_plate || "—"}
-          />
-
-          <InfoTile
-            icon={<CarFront className="h-4 w-4 text-slate-300" />}
-            label={t("common", "vehicle")}
-            value={`${issue.vehicle_brand || "—"} ${
-              issue.vehicle_model || ""
-            }`.trim()}
-          />
-
-          <InfoTile
-            icon={<UserRound className="h-4 w-4 text-slate-300" />}
-            label={t("issues", "reportedBy")}
-            value={issue.reported_by_name || "—"}
-          />
-
-          <InfoTile
-            icon={<CalendarDays className="h-4 w-4 text-slate-300" />}
-            label={t("issues", "createdAt")}
-            value={formatDate(issue.created_at, localeTag)}
-          />
-
-          <InfoTile
-            icon={<Clock3 className="h-4 w-4 text-slate-300" />}
-            label={t("issues", "updatedAt")}
-            value={formatDate(issue.updated_at, localeTag)}
-          />
-
-          <InfoTile
-            icon={<Settings2 className="h-4 w-4 text-slate-300" />}
-            label={t("issues", "serviceInKm")}
-            value={
-              issue.need_service_in_km != null
-                ? String(issue.need_service_in_km)
-                : "—"
-            }
-          />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <StatusTile
-            label={t("issues", "brakes")}
-            value={yesNo(issue.need_brakes)}
-            active={Boolean(issue.need_brakes)}
-            icon={<Wrench className="h-4 w-4 text-slate-300" />}
-          />
-
-          <StatusTile
-            label={t("issues", "tires")}
-            value={yesNo(issue.need_tires)}
-            active={Boolean(issue.need_tires)}
-            icon={<Wrench className="h-4 w-4 text-slate-300" />}
-          />
-
-          <StatusTile
-            label={t("issues", "oil")}
-            value={yesNo(issue.need_oil)}
-            active={Boolean(issue.need_oil)}
-            icon={<Wrench className="h-4 w-4 text-slate-300" />}
-          />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <InfoTile
-            icon={<CalendarDays className="h-4 w-4 text-slate-300" />}
-            label={t("issues", "scheduledFor")}
-            value={formatDate(issue.scheduled_for, localeTag)}
-          />
-
-          <InfoTile
-            icon={<TriangleAlert className="h-4 w-4 text-slate-300" />}
-            label={t("issues", "scheduledLocation")}
-            value={issue.scheduled_location || "—"}
-          />
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          <TextBlock
-            title={t("issues", "dashboardChecks")}
-            value={issue.dashboard_checks}
-          />
-
-          <TextBlock
-            title={t("issues", "otherProblems")}
-            value={issue.other_problems}
-          />
-        </div>
-      </div>
-    </SectionCard>
-  );
-}
-
-function InfoTile({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-      <div className="flex items-center gap-2">
-        {icon}
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-          {label}
-        </p>
-      </div>
-
-      <p className="mt-3 break-words text-sm font-medium text-white">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function StatusTile({
-  icon,
-  label,
-  value,
-  active,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  active: boolean;
-}) {
-  return (
-    <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-      <div className="flex items-center gap-2">
-        {icon}
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-          {label}
-        </p>
-      </div>
-
-      <span
-        className={cn(
-          "mt-3 inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold",
-          active
-            ? "border-amber-200 bg-amber-50 text-amber-700"
-            : "border-slate-200 bg-slate-100 text-slate-600"
-        )}
+        }
       >
-        {value}
-      </span>
-    </div>
-  );
-}
+        <ListRow
+          leading={<CarFront className="h-4 w-4" />}
+          title={issue.vehicle_license_plate || fallback}
+          meta={
+            <>
+              <ListChip icon={<UserRound className="h-3 w-3" />}>
+                {t("issues", "reportedBy")}: {reporterName}
+              </ListChip>
 
-function TextBlock({
-  title,
-  value,
-}: {
-  title: string;
-  value?: string | null;
-}) {
-  return (
-    <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-        {title}
-      </p>
+              <ListChip icon={<CalendarDays className="h-3 w-3" />}>
+                {t("issues", "createdAt")}:{" "}
+                {formatDate(issue.created_at, locale)}
+              </ListChip>
 
-      <p className="mt-3 min-h-[80px] whitespace-pre-wrap break-words text-sm text-slate-200">
-        {value?.trim() || "—"}
-      </p>
+              {issue.updated_at ? (
+                <ListChip icon={<CalendarDays className="h-3 w-3" />}>
+                  {t("issues", "updatedAt")}:{" "}
+                  {formatDate(issue.updated_at, locale)}
+                </ListChip>
+              ) : null}
+            </>
+          }
+        />
+      </SectionCard>
+
+      {(reportedItems.length > 0 || photos.length > 0) && (
+        <SectionCard title={t("issues", "reportIssue")}>
+          <div className="space-y-3">
+            {reportedItems.map((item) => (
+              <div
+                key={item.key}
+                className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  {item.label}
+                </p>
+
+                <p className="mt-1 whitespace-pre-line text-sm font-semibold text-white">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+
+            {photos.length > 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+                  <ImageIcon className="h-4 w-4" />
+                  {t("issues", "addPhotos")}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {photos.map((photo, index) => {
+                    const url = getPhotoUrl(photo);
+                    if (!url) return null;
+
+                    return (
+                      <a
+                        key={photo.id ?? index}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="overflow-hidden rounded-2xl border border-white/10 bg-black/20"
+                      >
+                        <img
+                          src={url}
+                          alt={`${t("issues", "addPhotos")} ${index + 1}`}
+                          className="h-40 w-full object-cover"
+                        />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </SectionCard>
+      )}
     </div>
   );
 }

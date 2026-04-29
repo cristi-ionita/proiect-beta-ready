@@ -12,24 +12,22 @@ export default function AdminLeaveScreen() {
   const { t } = useSafeI18n();
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-2">
-        <CardShell accent="blue">
-          <StatCard
-            title={t("leave", "approvedLeaves")}
-            icon={<CalendarDays className="h-6 w-6" />}
-            onClick={() => router.push("/admin/leave/all-leaves")}
-          />
-        </CardShell>
+    <section className="grid gap-5 sm:grid-cols-2">
+      <CardShell accent="blue">
+        <StatCard
+          title={t("leave", "approvedLeaves")}
+          icon={<CalendarDays className="h-6 w-6" />}
+          onClick={() => router.push("/admin/leave/all-leaves")}
+        />
+      </CardShell>
 
-        <CardShell accent="emerald">
-          <StatCard
-            title={t("leave", "approvals")}
-            icon={<CheckCircle2 className="h-6 w-6" />}
-            onClick={() => router.push("/admin/leave/approvals")}
-          />
-        </CardShell>
-      </section>
-    </div>
+      <CardShell accent="emerald">
+        <StatCard
+          title={t("leave", "approvals")}
+          icon={<CheckCircle2 className="h-6 w-6" />}
+          onClick={() => router.push("/admin/leave/approvals")}
+        />
+      </CardShell>
+    </section>
   );
 }

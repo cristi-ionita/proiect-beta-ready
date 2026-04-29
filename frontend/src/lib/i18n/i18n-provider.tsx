@@ -31,36 +31,20 @@ type I18nContextValue = {
 export const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  /**
-   * CRITICAL:
-   * - server render = defaultLocale
-   * - client hydration = SAME VALUE
-   */
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
 
-  /**
-   * After hydration → sync with real stored/browser locale
-   */
   useEffect(() => {
     const realLocale = getCurrentLocale();
-
-    if (realLocale !== locale) {
-      setLocaleState(realLocale);
-    }
+    setLocaleState(realLocale);
   }, []);
 
-  /**
-   * Persist + update <html lang="">
-   */
   useEffect(() => {
     document.documentElement.lang = locale;
     setStoredLocale(locale);
   }, [locale]);
 
   const setLocale = useCallback((nextLocale: Locale) => {
-    if (!isLocale(nextLocale)) {
-      return;
-    }
+    if (!isLocale(nextLocale)) return;
 
     setLocaleState(nextLocale);
   }, []);
