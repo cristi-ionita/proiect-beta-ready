@@ -13,6 +13,8 @@ from app.core.rate_limit import (
     build_rate_limit_key,
     login_rate_limiter,
     resend_verification_rate_limiter,
+    forgot_password_rate_limiter,
+    reset_password_rate_limiter,
 )
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db.models.registration_request import RegistrationRequest
@@ -58,6 +60,8 @@ def _hash_reset_token(token: str) -> str:
 def _verify_reset_token(token: str, token_hash: str) -> bool:
     return verify_password(token, token_hash)
 
+
+# ---------------- REGISTER ----------------
 
 @router.post(
     "/register",
@@ -142,6 +146,8 @@ async def register(
     return registration_request
 
 
+# ---------------- RESEND VERIFICATION ----------------
+
 @router.post(
     "/resend-verification-email",
     response_model=ResendVerificationEmailResponseSchema,
@@ -205,6 +211,8 @@ async def resend_verification_email(
     )
 
 
+# ---------------- VERIFY EMAIL ----------------
+
 @router.post("/verify-email", response_model=VerifyEmailResponseSchema)
 async def verify_email(
     payload: VerifyEmailRequestSchema,
@@ -253,11 +261,18 @@ async def verify_email(
     )
 
 
+# ---------------- FORGOT PASSWORD ----------------
+
 @router.post("/forgot-password", response_model=PasswordResetResponseSchema)
 async def forgot_password(
     payload: ForgotPasswordRequestSchema,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> PasswordResetResponseSchema:
+    forgot_password_rate_limiter.hit(
+        build_rate_limit_key(request, payload.email)
+    )
+
     generic_message = (
         "If an account exists for this email, a password reset email has been sent."
     )
@@ -287,16 +302,33 @@ async def forgot_password(
     return PasswordResetResponseSchema(message=generic_message)
 
 
+# ---------------- RESET PASSWORD ----------------
+
 @router.post("/reset-password", response_model=PasswordResetResponseSchema)
 async def reset_password(
     payload: ResetPasswordRequestSchema,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> PasswordResetResponseSchema:
+    reset_password_rate_limiter.hit(
+        build_rate_limit_key(request, payload.token[:12])
+    )
+
     now = datetime.now(timezone.utc)
+
+    if len(payload.password.strip()) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters.",
+        )
 
     users = (
         await db.execute(
-            select(User).where(User.password_reset_token_hash.is_not(None))
+            select(User).where(
+                User.password_reset_token_hash.is_not(None),
+                User.password_reset_expires_at.is_not(None),
+                User.password_reset_expires_at >= now,
+            )
         )
     ).scalars().all()
 
@@ -316,20 +348,6 @@ async def reset_password(
             detail="Invalid or expired password reset token.",
         )
 
-    if (
-        matched_user.password_reset_expires_at is None
-        or matched_user.password_reset_expires_at < now
-    ):
-        matched_user.password_reset_token_hash = None
-        matched_user.password_reset_expires_at = None
-        db.add(matched_user)
-        await db.commit()
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired password reset token.",
-        )
-
     matched_user.password_hash = get_password_hash(payload.password)
     matched_user.password_reset_token_hash = None
     matched_user.password_reset_expires_at = None
@@ -341,6 +359,8 @@ async def reset_password(
         message="Password has been reset successfully.",
     )
 
+
+# ---------------- LOGIN ----------------
 
 @router.post("/login", response_model=LoginResponseSchema)
 async def login(
@@ -385,6 +405,8 @@ async def login(
         user=UserReadSchema.model_validate(user),
     )
 
+
+# ---------------- ME ----------------
 
 @router.get("/me", response_model=UserReadSchema)
 async def me(

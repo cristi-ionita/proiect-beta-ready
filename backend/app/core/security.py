@@ -18,8 +18,10 @@ ACCESS_TOKEN_TYPE = "access"
 
 def _normalize_plain_value(value: str, field_name: str) -> str:
     cleaned = value.strip()
+
     if not cleaned:
         raise ValueError(f"{field_name} cannot be empty.")
+
     return cleaned
 
 
@@ -37,7 +39,9 @@ def _get_token_expiration_minutes(expires_minutes: int | None = None) -> int:
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(_normalize_plain_value(password, "Password"))
+    normalized_password = _normalize_plain_value(password, "Password")
+
+    return pwd_context.hash(normalized_password)
 
 
 def get_password_hash(password: str) -> str:
@@ -50,10 +54,9 @@ def verify_password(password: str, password_hash: str | None) -> bool:
 
     try:
         normalized_password = _normalize_plain_value(password, "Password")
-    except ValueError:
+        return pwd_context.verify(normalized_password, password_hash)
+    except (ValueError, TypeError):
         return False
-
-    return pwd_context.verify(normalized_password, password_hash)
 
 
 def create_access_token(
@@ -76,6 +79,7 @@ def create_access_token(
         "role": role,
         "type": ACCESS_TOKEN_TYPE,
         "iat": int(now.timestamp()),
+        "nbf": int(now.timestamp()),
         "exp": int(expires_at.timestamp()),
     }
 
@@ -102,10 +106,12 @@ def decode_access_token(token: str) -> dict[str, Any]:
         raise ValueError("Invalid token type.")
 
     role = payload.get("role")
+
     if role not in VALID_USER_ROLES:
         raise ValueError("Invalid token role.")
 
     sub = payload.get("sub")
+
     if not isinstance(sub, str) or not sub.strip():
         raise ValueError("Invalid token subject.")
 

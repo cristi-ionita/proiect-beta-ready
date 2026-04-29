@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     SMTP_USE_TLS: bool = True
 
     EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS: int = 24
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 60
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
@@ -77,12 +78,19 @@ class Settings(BaseSettings):
             raise ValueError("Value must be a string.")
 
         cleaned = value.strip()
+
         if not cleaned:
             raise ValueError("Value must not be empty.")
 
         return cleaned
 
-    @field_validator("SMTP_HOST", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_FROM_EMAIL", mode="before")
+    @field_validator(
+        "SMTP_HOST",
+        "SMTP_USERNAME",
+        "SMTP_PASSWORD",
+        "SMTP_FROM_EMAIL",
+        mode="before",
+    )
     @classmethod
     def normalize_optional_string(cls, value: object) -> str | None:
         if value is None:
@@ -147,8 +155,9 @@ class Settings(BaseSettings):
             raise ValueError("FRONTEND_URL must be a string.")
 
         cleaned = value.strip().rstrip("/")
-        if not cleaned.startswith("http://") and not cleaned.startswith("https://"):
-            raise ValueError("FRONTEND_URL must start with http:// or https://")
+
+        if not cleaned.startswith(("http://", "https://")):
+            raise ValueError("FRONTEND_URL must start with http:// or https://.")
 
         return cleaned
 
@@ -157,6 +166,7 @@ class Settings(BaseSettings):
     def validate_port(cls, value: int) -> int:
         if value <= 0 or value > 65535:
             raise ValueError("Port must be between 1 and 65535.")
+
         return value
 
     @field_validator("ACCESS_TOKEN_EXPIRE_MINUTES")
@@ -164,17 +174,40 @@ class Settings(BaseSettings):
     def validate_access_token_expire_minutes(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be greater than 0.")
+
         if value > 24 * 60:
             raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES is unreasonably high.")
+
         return value
 
     @field_validator("EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS")
     @classmethod
     def validate_email_verification_token_expire_hours(cls, value: int) -> int:
         if value <= 0:
-            raise ValueError("EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS must be greater than 0.")
+            raise ValueError(
+                "EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS must be greater than 0."
+            )
+
         if value > 24 * 30:
-            raise ValueError("EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS is unreasonably high.")
+            raise ValueError(
+                "EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS is unreasonably high."
+            )
+
+        return value
+
+    @field_validator("PASSWORD_RESET_TOKEN_EXPIRE_MINUTES")
+    @classmethod
+    def validate_password_reset_token_expire_minutes(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError(
+                "PASSWORD_RESET_TOKEN_EXPIRE_MINUTES must be greater than 0."
+            )
+
+        if value > 24 * 60:
+            raise ValueError(
+                "PASSWORD_RESET_TOKEN_EXPIRE_MINUTES is unreasonably high."
+            )
+
         return value
 
     @field_validator("ACCESS_TOKEN_SECRET")
@@ -219,13 +252,16 @@ class Settings(BaseSettings):
 
         if isinstance(value, str):
             raw_items = [item.strip() for item in value.split(",")]
-            origins = [item for item in raw_items if item]
+            origins = [item.rstrip("/") for item in raw_items if item]
         elif isinstance(value, list):
             origins = []
+
             for item in value:
                 if not isinstance(item, str):
                     raise ValueError("Each CORS origin must be a string.")
-                cleaned = item.strip()
+
+                cleaned = item.strip().rstrip("/")
+
                 if cleaned:
                     origins.append(cleaned)
         else:
@@ -236,15 +272,23 @@ class Settings(BaseSettings):
         if any(origin == "*" for origin in origins):
             raise ValueError("CORS_ORIGINS must not contain '*'.")
 
-        return origins
+        for origin in origins:
+            if not origin.startswith(("http://", "https://")):
+                raise ValueError(
+                    "Each CORS origin must start with http:// or https://."
+                )
+
+        return sorted(set(origins))
 
     @field_validator("MAX_UPLOAD_SIZE_BYTES")
     @classmethod
     def validate_max_upload_size_bytes(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("MAX_UPLOAD_SIZE_BYTES must be greater than 0.")
+
         if value > 50 * 1024 * 1024:
             raise ValueError("MAX_UPLOAD_SIZE_BYTES is unreasonably high.")
+
         return value
 
     @property
@@ -277,6 +321,9 @@ class Settings(BaseSettings):
 
         if self.is_production and not self.CORS_ORIGINS:
             raise ValueError("CORS_ORIGINS must not be empty in production.")
+
+        if self.is_production and not self.email_enabled:
+            raise ValueError("Email configuration must be complete in production.")
 
 
 @lru_cache

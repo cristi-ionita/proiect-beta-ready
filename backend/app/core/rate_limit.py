@@ -25,6 +25,7 @@ class InMemoryRateLimiter:
 
     def _prune_bucket(self, bucket: Deque[float], now: float) -> None:
         threshold = now - self.window_seconds
+
         while bucket and bucket[0] <= threshold:
             bucket.popleft()
 
@@ -46,9 +47,7 @@ class InMemoryRateLimiter:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail="Too many attempts. Please try again later.",
-                    headers={
-                        "Retry-After": str(retry_after),
-                    },
+                    headers={"Retry-After": str(retry_after)},
                 )
 
             bucket.append(now)
@@ -61,6 +60,7 @@ class InMemoryRateLimiter:
 
         for key, bucket in self._storage.items():
             self._prune_bucket(bucket, now)
+
             if not bucket:
                 keys_to_delete.append(key)
 
@@ -74,6 +74,22 @@ def normalize_rate_limit_key(value: str) -> str:
 
 
 def _get_client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+
+        if client_ip:
+            return client_ip
+
+    real_ip = request.headers.get("x-real-ip")
+
+    if real_ip:
+        client_ip = real_ip.strip()
+
+        if client_ip:
+            return client_ip
+
     if request.client and request.client.host:
         return request.client.host.strip() or "unknown"
 
@@ -91,3 +107,5 @@ def build_rate_limit_key(request: Request, identifier: str | None = None) -> str
 
 login_rate_limiter = InMemoryRateLimiter(limit=5, window_seconds=60)
 resend_verification_rate_limiter = InMemoryRateLimiter(limit=3, window_seconds=600)
+forgot_password_rate_limiter = InMemoryRateLimiter(limit=5, window_seconds=900)
+reset_password_rate_limiter = InMemoryRateLimiter(limit=10, window_seconds=900)

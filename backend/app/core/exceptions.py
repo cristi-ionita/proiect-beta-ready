@@ -83,7 +83,12 @@ def _map_http_exception(exc: HTTPException) -> tuple[str, str]:
             "VALIDATION_ERROR",
             "errors.validation.invalid_request",
         ),
+        status.HTTP_429_TOO_MANY_REQUESTS: (
+            "RATE_LIMITED",
+            "errors.http.too_many_requests",
+        ),
     }
+
     return mapping.get(exc.status_code, ("HTTP_ERROR", "errors.http.bad_request"))
 
 
@@ -110,11 +115,22 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: HTTPException,
     ) -> JSONResponse:
-        logger.warning(
-            "HTTPException %s %s -> %s",
+        log_level = logging.WARNING
+
+        if exc.status_code in {
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+            status.HTTP_404_NOT_FOUND,
+            status.HTTP_429_TOO_MANY_REQUESTS,
+        }:
+            log_level = logging.INFO
+
+        logger.log(
+            log_level,
+            "HTTPException %s %s -> status=%s",
             request.method,
             request.url.path,
-            exc.detail,
+            exc.status_code,
         )
 
         language = get_language_from_headers(request.headers)
@@ -139,10 +155,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         raw_errors = exc.errors()
 
         logger.warning(
-            "Validation error %s %s -> %s",
+            "Validation error %s %s",
             request.method,
             request.url.path,
-            raw_errors,
         )
 
         language = get_language_from_headers(request.headers)

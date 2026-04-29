@@ -32,6 +32,7 @@ app.add_middleware(
         "X-Request-ID",
     ],
     expose_headers=["X-Request-ID"],
+    max_age=600,
 )
 
 app.add_middleware(RequestLoggingMiddleware)
@@ -41,7 +42,7 @@ register_exception_handlers(app)
 app.include_router(api_router)
 
 
-@app.get("/", tags=["root"])
+@app.get("/", tags=["root"], include_in_schema=False)
 async def root() -> dict[str, str]:
     return {
         "name": settings.APP_NAME,

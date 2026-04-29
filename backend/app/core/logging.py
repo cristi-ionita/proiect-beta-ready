@@ -19,6 +19,7 @@ class RequestIdFilter(logging.Filter):
 def configure_logging() -> None:
     root_logger = logging.getLogger()
 
+    # evită dublarea handlerelor (reload, tests, etc.)
     if root_logger.handlers:
         return
 
@@ -35,10 +36,21 @@ def configure_logging() -> None:
     root_logger.setLevel(level)
     root_logger.addHandler(handler)
 
+    # --- tuning loggers externe ---
+
+    # Uvicorn
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
 
+    # SQLAlchemy (important pentru prod)
     logging.getLogger("sqlalchemy.engine").setLevel(
         logging.INFO if settings.DEBUG else logging.WARNING
     )
     logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+
+    # httpx / urllib (dacă vei folosi)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+    # evită propagare excesivă în unele cazuri
+    for name in ["uvicorn.access", "uvicorn.error"]:
+        logging.getLogger(name).propagate = False
