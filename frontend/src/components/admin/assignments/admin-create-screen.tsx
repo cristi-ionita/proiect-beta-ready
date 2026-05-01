@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ClipboardList } from "lucide-react";
+import { CheckCircle2, ClipboardList } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import Alert from "@/components/ui/alert";
@@ -66,7 +66,6 @@ export default function AdminCreateAssignmentScreen() {
         variant="back"
         onClick={() => router.push("/admin/assignments")}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

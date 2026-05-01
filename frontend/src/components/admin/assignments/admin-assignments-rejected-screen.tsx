@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CarFront, Clock, UserRound, XCircle } from "lucide-react";
+import { CarFront, Clock, UserRound, XCircle } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import ListChip from "@/components/patterns/list-chip";
@@ -34,7 +34,6 @@ export default function AdminRejectedAssignmentsScreen() {
         variant="back"
         onClick={() => router.push("/admin/assignments")}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

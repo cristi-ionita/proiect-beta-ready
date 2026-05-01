@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import ListChip from "@/components/patterns/list-chip";
@@ -13,7 +13,6 @@ import StatusBadge from "@/components/ui/status-badge";
 import { ROUTES } from "@/constants/routes";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
 import { isApiClientError } from "@/lib/api-error";
-import { formatDate } from "@/lib/utils";
 import { api } from "@/lib/axios";
 
 type LeaveRequestStatus = "pending" | "approved" | "rejected" | "canceled";
@@ -35,6 +34,20 @@ type LeaveRequestItem = {
 type LeaveRequestListResponse = {
   requests: LeaveRequestItem[];
 };
+
+function formatDateOnly(value: string, localeTag: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(localeTag, {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+  }).format(date);
+}
 
 function getStatusVariant(status: LeaveRequestStatus) {
   if (status === "approved") return "success";
@@ -93,7 +106,6 @@ export default function EmployeeLeaveHistoryScreen() {
         variant="back"
         onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE)}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 
@@ -110,11 +122,11 @@ export default function EmployeeLeaveHistoryScreen() {
             {data.map((request) => (
               <ListRow
                 key={request.id}
-                leading={<CalendarDays className="h-4 w-4" />}
-                title={`${formatDate(request.start_date, localeTag)} → ${formatDate(
-                  request.end_date,
+                leading={<CalendarDays className="h-4 w-4 shrink-0" />}
+                title={`${formatDateOnly(
+                  request.start_date,
                   localeTag
-                )}`}
+                )} → ${formatDateOnly(request.end_date, localeTag)}`}
                 subtitle={request.reason || undefined}
                 badge={
                   <StatusBadge
@@ -123,18 +135,11 @@ export default function EmployeeLeaveHistoryScreen() {
                   />
                 }
                 meta={
-                  <>
-                    <ListChip icon={<CalendarDays className="h-3 w-3" />}>
-                      {t("issues", "createdAt")}:{" "}
-                      {formatDate(request.created_at, localeTag)}
+                  request.rejection_reason ? (
+                    <ListChip variant="rose">
+                      Motiv respingere: {request.rejection_reason}
                     </ListChip>
-
-                    {request.rejection_reason ? (
-                      <ListChip variant="rose">
-                        Motiv respingere: {request.rejection_reason}
-                      </ListChip>
-                    ) : null}
-                  </>
+                  ) : undefined
                 }
               />
             ))}

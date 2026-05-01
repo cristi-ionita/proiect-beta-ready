@@ -26,31 +26,30 @@ type ButtonProps = {
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
 const baseStyles =
-  "inline-flex items-center justify-center gap-2 font-semibold transition disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex min-w-0 max-w-full select-none items-center justify-center gap-2 text-center font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-60 [-webkit-tap-highlight-color:transparent] touch-manipulation focus:outline-none active:scale-[0.99] [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0";
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-9 px-3.5 text-sm",
-  md: "h-10 px-4 text-sm",
-  lg: "h-11 px-5 text-base",
+  sm: "min-h-9 px-3.5 py-2 text-sm",
+  md: "min-h-10 px-4 py-2.5 text-sm",
+  lg: "min-h-11 px-5 py-3 text-base",
 };
 
 const variantStyles: Record<Exclude<ButtonVariant, "filter">, string> = {
   primary:
-    "rounded-xl border border-blue-600 bg-blue-600 text-white hover:bg-blue-500",
+    "rounded-xl border border-blue-500 bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700",
   secondary:
-    "rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15 backdrop-blur-md",
+    "rounded-xl border border-white/10 bg-white/10 text-white backdrop-blur-md hover:bg-white/15 active:bg-white/10",
   ghost:
-    "rounded-xl border border-transparent bg-transparent text-slate-200 hover:bg-white/10",
+    "rounded-xl border border-transparent bg-transparent text-slate-200 hover:bg-white/10 active:bg-transparent",
   danger:
-    "rounded-xl border border-rose-400/30 bg-rose-500/85 text-white hover:bg-rose-500",
+    "rounded-xl border border-rose-400/30 bg-rose-500/90 text-white shadow-sm shadow-rose-950/20 hover:bg-rose-500 active:bg-rose-600",
   back:
-    "rounded-full border border-white/10 bg-black/70 text-white hover:bg-black/85 backdrop-blur-md",
+    "whitespace-nowrap rounded-full border border-white/10 bg-black/70 text-white backdrop-blur-md hover:bg-black/85 active:bg-black/70",
 };
 
 function getFilterDotClass(dotColor: ButtonDotColor): string {
   if (dotColor === "blue") return "bg-blue-400";
   if (dotColor === "amber") return "bg-amber-400";
-
   return "bg-slate-400";
 }
 
@@ -70,7 +69,7 @@ function getFilterButtonClass(
     return "rounded-full border border-white/20 bg-white/20 text-white backdrop-blur-md";
   }
 
-  return "rounded-full border border-white/10 bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white backdrop-blur-md";
+  return "rounded-full border border-white/10 bg-white/10 text-slate-300 backdrop-blur-md hover:bg-white/20 hover:text-white";
 }
 
 export default function Button({
@@ -102,7 +101,10 @@ export default function Button({
     >
       {variant === "filter" ? (
         <span
-          className={cn("h-2 w-2 rounded-full", getFilterDotClass(dotColor))}
+          className={cn(
+            "h-2 w-2 shrink-0 rounded-full",
+            getFilterDotClass(dotColor)
+          )}
         />
       ) : null}
 

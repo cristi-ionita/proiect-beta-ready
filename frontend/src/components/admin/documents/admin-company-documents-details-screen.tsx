@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, FileText, Trash2, Upload, User } from "lucide-react";
+import { CalendarDays, FileText, Plus, User } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import ListChip from "@/components/patterns/list-chip";
 import ListRow from "@/components/patterns/list-row";
-import AppModal from "@/components/ui/app-modal";
 import Button from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import SectionCard from "@/components/ui/section-card";
@@ -34,7 +33,7 @@ type Props = {
 
 type PreviewState = {
   url: string;
-  fileName: string;
+  type: string;
 };
 
 const DOCUMENT_TYPES = [DOCUMENT_TYPE.CONTRACT, DOCUMENT_TYPE.PAYSLIP] as const;
@@ -65,17 +64,29 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
   const [documentsError, setDocumentsError] = useState(false);
   const [savingType, setSavingType] = useState<DocumentType | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<DocumentItem | null>(null);
+
+  const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(
+    null
+  );
   const [preview, setPreview] = useState<PreviewState | null>(null);
-  const [previewLoadingId, setPreviewLoadingId] = useState<number | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const fallback = "—";
+
+  const isWorking = Boolean(
+    selectedDocument &&
+      (deletingId === selectedDocument.id ||
+        savingType === selectedDocument.type)
+  );
 
   const closePreview = useCallback(() => {
     setPreview((current) => {
       if (current?.url) URL.revokeObjectURL(current.url);
       return null;
     });
+
+    setSelectedDocument(null);
+    setPreviewLoading(false);
   }, []);
 
   const loadDocuments = useCallback(async () => {
@@ -125,21 +136,11 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
     return type;
   }
 
-  function getUploadLabel(type: DocumentType, hasDocument: boolean): string {
-    if (type === DOCUMENT_TYPE.CONTRACT) {
-      return hasDocument
-        ? t("documents", "replaceContract")
-        : t("documents", "uploadContract");
-    }
-
-    return hasDocument
-      ? t("documents", "replacePayslip")
-      : t("documents", "uploadPayslip");
-  }
-
-  async function handlePreview(document: DocumentItem) {
+  async function openDocumentDialog(document: DocumentItem) {
     try {
-      setPreviewLoadingId(document.id);
+      setSelectedDocument(document);
+      setPreviewLoading(true);
+      setDocumentsError(false);
 
       const blob = await adminDownloadDocumentFile(document.id);
       const url = URL.createObjectURL(blob);
@@ -149,11 +150,13 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
 
         return {
           url,
-          fileName: document.file_name || "document",
+          type: blob.type,
         };
       });
+    } catch {
+      setDocumentsError(true);
     } finally {
-      setPreviewLoadingId(null);
+      setPreviewLoading(false);
     }
   }
 
@@ -170,6 +173,7 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
 
       await adminUploadDocument(userId, form);
       await loadDocuments();
+      closePreview();
     } finally {
       setSavingType(null);
 
@@ -178,19 +182,23 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
     }
   }
 
-  async function handleDeleteConfirmed() {
-    if (!confirmDelete) return;
+  async function handleDeleteSelected() {
+    if (!selectedDocument) return;
 
     try {
-      setDeletingId(confirmDelete.id);
+      setDeletingId(selectedDocument.id);
 
-      await adminDeleteDocument(confirmDelete.id);
-      closePreview();
+      await adminDeleteDocument(selectedDocument.id);
       await loadDocuments();
+      closePreview();
     } finally {
       setDeletingId(null);
-      setConfirmDelete(null);
     }
+  }
+
+  function handleReplaceSelected() {
+    if (!selectedDocument) return;
+    fileInputsRef.current[selectedDocument.type]?.click();
   }
 
   function renderDocumentList(type: DocumentType) {
@@ -210,48 +218,19 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
     return (
       <div className="mt-3 space-y-2">
         {docs.map((document) => {
-          const isDeleting = deletingId === document.id;
-          const isPreviewLoading = previewLoadingId === document.id;
           const date = document.updated_at || document.created_at;
 
           return (
             <ListRow
               key={document.id}
-              leading={<FileText className="h-4 w-4" />}
-              title={
-                isPreviewLoading
-                  ? t("documents", "opening")
-                  : document.file_name || fallback
-              }
+              leading={<FileText className="h-4 w-4 shrink-0" />}
+              title={document.file_name || fallback}
               meta={
-                <ListChip icon={<CalendarDays className="h-3 w-3" />}>
+                <ListChip icon={<CalendarDays className="h-3 w-3 shrink-0" />}>
                   {formatDate(date, localeTag)}
                 </ListChip>
               }
-              actions={
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={isPreviewLoading}
-                    loading={isPreviewLoading}
-                    onClick={() => void handlePreview(document)}
-                  >
-                    {t("documents", "viewDocument")}
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    disabled={isDeleting}
-                    loading={isDeleting}
-                    onClick={() => setConfirmDelete(document)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {t("common", "delete")}
-                  </Button>
-                </div>
-              }
+              onClick={() => void openDocumentDialog(document)}
             />
           );
         })}
@@ -265,7 +244,6 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
         variant="back"
         onClick={() => router.push("/admin/documents/company-documents")}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 
@@ -280,10 +258,10 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
         <SectionCard title={t("documents", "user")}>
           {user ? (
             <ListRow
-              leading={<User className="h-4 w-4" />}
+              leading={<User className="h-4 w-4 shrink-0" />}
               title={user.full_name || fallback}
               meta={
-                <ListChip icon={<User className="h-3 w-3" />}>
+                <ListChip icon={<User className="h-3 w-3 shrink-0" />}>
                   {t("common", "shift")}: {user.shift_number || fallback}
                 </ListChip>
               }
@@ -325,12 +303,13 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
 
                       <Button
                         size="sm"
+                        className="flex h-9 w-9 items-center justify-center p-0"
                         disabled={isSaving}
                         loading={isSaving}
                         onClick={() => fileInputsRef.current[type]?.click()}
+                        aria-label={`Adaugă ${getLabel(type)}`}
                       >
-                        <Upload className="h-4 w-4" />
-                        {getUploadLabel(type, Boolean(document))}
+                        <Plus className="h-4 w-4" />
                       </Button>
                     </>
                   }
@@ -343,36 +322,47 @@ export default function AdminCompanyDocumentsDetailsScreen({ userId }: Props) {
         </SectionCard>
       </DataStateBoundary>
 
-      <AppModal
-        open={Boolean(preview)}
-        onClose={closePreview}
-        title={preview?.fileName}
-      >
-        {preview ? (
-          <iframe
-            src={preview.url}
-            title={preview.fileName}
-            className="h-[70vh] w-full rounded-xl bg-black"
-          />
-        ) : null}
-      </AppModal>
-
       <ConfirmDialog
-        open={Boolean(confirmDelete)}
-        title={t("documents", "deleteDocumentTitle")}
-        message={`${t("documents", "confirmDeleteDocument")}${
-          confirmDelete?.file_name ? `\n${confirmDelete.file_name}` : ""
-        }`}
-        confirmText={t("common", "delete")}
-        cancelText={t("common", "cancel")}
-        loading={Boolean(confirmDelete && deletingId === confirmDelete.id)}
-        loadingText={t("documents", "deleting")}
-        onConfirm={() => void handleDeleteConfirmed()}
-        onCancel={() => {
-          if (deletingId !== null) return;
-          setConfirmDelete(null);
-        }}
-      />
+        open={Boolean(selectedDocument)}
+        title={selectedDocument?.file_name || ""}
+        message=""
+        confirmText="Înlocuiește"
+        cancelText="Închide"
+        confirmVariant="primary"
+        loading={isWorking}
+        onConfirm={handleReplaceSelected}
+        onCancel={closePreview}
+      >
+        <div className="space-y-4">
+          {previewLoading ? (
+            <p className="text-sm text-slate-300">Se încarcă...</p>
+          ) : preview ? (
+            preview.type.includes("image") ? (
+              <img
+                src={preview.url}
+                alt={selectedDocument?.file_name || "document"}
+                className="max-h-[60vh] w-full rounded-2xl object-contain"
+              />
+            ) : (
+              <iframe
+                src={preview.url}
+                title={selectedDocument?.file_name || "document"}
+                className="h-[60vh] w-full rounded-2xl bg-white"
+              />
+            )
+          ) : null}
+
+          <Button
+            type="button"
+            variant="danger"
+            className="w-full"
+            disabled={isWorking || previewLoading}
+            onClick={() => void handleDeleteSelected()}
+          >
+            Șterge
+          </Button>
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

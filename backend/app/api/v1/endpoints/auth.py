@@ -61,6 +61,16 @@ def _verify_reset_token(token: str, token_hash: str) -> bool:
     return verify_password(token, token_hash)
 
 
+def _detect_conflict_field(payload, item) -> str:
+    if payload.email and getattr(item, "email", None) == payload.email:
+        return "email"
+    if payload.username and getattr(item, "username", None) == payload.username:
+        return "username"
+    if payload.unique_code and getattr(item, "unique_code", None) == payload.unique_code:
+        return "unique_code"
+    return "date"
+
+
 # ---------------- REGISTER ----------------
 
 @router.post(
@@ -75,7 +85,7 @@ async def register(
     if payload.role.value == "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin accounts cannot be self-registered",
+            detail="Conturile de administrator nu pot fi create prin înregistrare publică.",
         )
 
     user_filters = []
@@ -92,8 +102,15 @@ async def register(
         ).scalar_one_or_none()
 
         if existing_user:
+            field = _detect_conflict_field(payload, existing_user)
+
+            if existing_user.status != UserStatus.APPROVED.value:
+                _raise_conflict(
+                    f"Există deja un cont cu acest {field}, dar încă nu este aprobat de administrator."
+                )
+
             _raise_conflict(
-                "A user with the same email, username, or unique_code already exists"
+                f"Există deja un cont activ cu acest {field}."
             )
 
     request_filters = []
@@ -110,8 +127,20 @@ async def register(
         ).scalar_one_or_none()
 
         if existing_request:
+            field = _detect_conflict_field(payload, existing_request)
+
+            if existing_request.status == RegistrationRequestStatus.PENDING.value:
+                if existing_request.email_verified_at is None:
+                    _raise_conflict(
+                        f"Există deja o cerere de înregistrare cu acest {field}, dar emailul nu este confirmat. Cere retrimiterea emailului de confirmare."
+                    )
+
+                _raise_conflict(
+                    f"Există deja o cerere de înregistrare cu acest {field}. Emailul este confirmat, dar contul așteaptă aprobarea administratorului."
+                )
+
             _raise_conflict(
-                "A registration request with the same email, username, or unique_code already exists"
+                f"Există deja o cerere de înregistrare cu acest {field}."
             )
 
     now = datetime.now(timezone.utc)
@@ -172,19 +201,19 @@ async def resend_verification_email(
     if registration_request is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Registration request not found for this email.",
+            detail="Nu există nicio cerere de înregistrare pentru acest email.",
         )
 
     if registration_request.status != RegistrationRequestStatus.PENDING.value:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only pending registration requests can receive a verification email.",
+            detail="Doar cererile în așteptare pot primi un nou email de confirmare.",
         )
 
     if registration_request.email_verified_at is not None:
         return ResendVerificationEmailResponseSchema(
             success=True,
-            message="Email is already verified.",
+            message="Emailul este deja confirmat. Contul așteaptă aprobarea administratorului.",
         )
 
     now = datetime.now(timezone.utc)
@@ -207,7 +236,7 @@ async def resend_verification_email(
 
     return ResendVerificationEmailResponseSchema(
         success=True,
-        message="Verification email sent successfully.",
+        message="Emailul de confirmare a fost retrimis cu succes.",
     )
 
 
@@ -229,13 +258,13 @@ async def verify_email(
     if registration_request is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invalid verification token",
+            detail="Linkul de confirmare este invalid.",
         )
 
     if registration_request.email_verified_at is not None:
         return VerifyEmailResponseSchema(
             success=True,
-            message="Email already verified",
+            message="Emailul este deja confirmat.",
         )
 
     now = datetime.now(timezone.utc)
@@ -246,7 +275,7 @@ async def verify_email(
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification token has expired",
+            detail="Linkul de confirmare a expirat. Cere retrimiterea emailului de confirmare.",
         )
 
     registration_request.email_verified_at = now
@@ -257,7 +286,7 @@ async def verify_email(
 
     return VerifyEmailResponseSchema(
         success=True,
-        message="Email verified successfully",
+        message="Email confirmat cu succes. Contul așteaptă aprobarea administratorului.",
     )
 
 
@@ -274,7 +303,7 @@ async def forgot_password(
     )
 
     generic_message = (
-        "If an account exists for this email, a password reset email has been sent."
+        "Dacă există un cont pentru acest email, a fost trimis un email de resetare parolă."
     )
 
     user = (
@@ -319,7 +348,7 @@ async def reset_password(
     if len(payload.password.strip()) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters.",
+            detail="Parola trebuie să aibă cel puțin 8 caractere.",
         )
 
     users = (
@@ -345,7 +374,7 @@ async def reset_password(
     if matched_user is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired password reset token.",
+            detail="Tokenul de resetare este invalid sau expirat.",
         )
 
     matched_user.password_hash = get_password_hash(payload.password)
@@ -356,7 +385,7 @@ async def reset_password(
     await db.commit()
 
     return PasswordResetResponseSchema(
-        message="Password has been reset successfully.",
+        message="Parola a fost resetată cu succes.",
     )
 
 
@@ -377,19 +406,19 @@ async def login(
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
+            detail="Username sau parolă greșită.",
         )
 
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive",
+            detail="Contul este inactiv.",
         )
 
     if user.status != UserStatus.APPROVED.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"User account is not approved. Current status: {user.status}",
+            detail=f"Contul nu este aprobat de administrator. Status curent: {user.status}",
         )
 
     user.last_login_at = datetime.now(timezone.utc)
@@ -421,16 +450,21 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_active_approved_user),
 ) -> User:
-    email_changed = payload.email != current_user.email
-    username_changed = payload.username != current_user.username
+    next_email = payload.email if payload.email is not None else current_user.email
+    next_username = (
+        payload.username if payload.username is not None else current_user.username
+    )
+
+    email_changed = next_email != current_user.email
+    username_changed = next_username != current_user.username
 
     filters = []
 
-    if email_changed and payload.email is not None:
-        filters.append(User.email == payload.email)
+    if email_changed and next_email:
+        filters.append(User.email == next_email)
 
-    if username_changed and payload.username is not None:
-        filters.append(User.username == payload.username)
+    if username_changed and next_username:
+        filters.append(User.username == next_username)
 
     if filters:
         existing_user = (
@@ -443,22 +477,22 @@ async def update_me(
         ).scalar_one_or_none()
 
         if existing_user:
-            _raise_conflict("Email or username already in use")
+            _raise_conflict("Email sau username deja folosit.")
 
-    current_user.email = payload.email
-    current_user.username = payload.username
+    current_user.email = next_email
+    current_user.username = next_username
 
     if payload.password:
         if not payload.current_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is required.",
+                detail="Parola curentă este obligatorie.",
             )
 
         if not verify_password(payload.current_password, current_user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect.",
+                detail="Parola curentă este greșită.",
             )
 
         current_user.password_hash = get_password_hash(payload.password)

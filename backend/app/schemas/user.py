@@ -105,36 +105,10 @@ class UserLoginSchema(BaseSchema):
 
 
 class UserUpdateMeSchema(BaseSchema):
-    username: str | None = Field(default=None, min_length=3, max_length=50)
-    current_password: str | None = Field(default=None, min_length=1, max_length=128)
-    password: str | None = Field(default=None, min_length=8, max_length=128)
-
-    @field_validator("username", mode="before")
-    @classmethod
-    def normalize_username(cls, value: object) -> str | None:
-        if value is None:
-            return None
-
-        if not isinstance(value, str):
-            raise ValueError("username must be a string")
-
-        cleaned = value.strip()
-
-        return cleaned or None
-
-    @field_validator("current_password", "password", mode="before")
-    @classmethod
-    def normalize_password(cls, value: object) -> str | None:
-        if value is None:
-            return None
-
-        if not isinstance(value, str):
-            raise ValueError("password must be a string")
-
-        cleaned = value.strip()
-
-        return cleaned or None
-
+    email: str | None = None
+    username: str | None = None
+    current_password: str | None = None
+    password: str | None = None
 
 class UserReadSchema(BaseSchema):
     id: int

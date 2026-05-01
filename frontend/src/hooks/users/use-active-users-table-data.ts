@@ -111,20 +111,23 @@ export function useActiveUsersTableData(
       }
     }
 
-    return users.map((user) => {
-      const activeAssignment = activeAssignmentsByUser.get(user.id);
+    return users
+      .filter((user) => normalize(user.role) === "employee")
+      .filter((user) => user.is_active)
+      .map((user) => {
+        const activeAssignment = activeAssignmentsByUser.get(user.id);
 
-      return {
-        id: user.id,
-        full_name: user.full_name,
-        unique_code: user.unique_code ?? "",
-        role: user.role,
-        is_active: user.is_active,
-        shift_number: getUserShift(user),
-        vehicle_license_plate: activeAssignment
-          ? getAssignmentPlate(activeAssignment)
-          : null,
-      };
-    });
+        return {
+          id: user.id,
+          full_name: user.full_name,
+          unique_code: user.unique_code ?? "",
+          role: user.role,
+          is_active: user.is_active,
+          shift_number: getUserShift(user),
+          vehicle_license_plate: activeAssignment
+            ? getAssignmentPlate(activeAssignment)
+            : null,
+        };
+      });
   }, [users, leaveRequests, assignments]);
 }

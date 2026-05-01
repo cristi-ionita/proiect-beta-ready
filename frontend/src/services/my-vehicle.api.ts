@@ -77,6 +77,24 @@ export type MyVehicleResponse = {
   open_issues: MyVehicleIssue[];
 };
 
+export async function downloadMyVehiclePhoto(photoId: number): Promise<Blob> {
+  const response = await api.get(`/my-vehicle/photos/${photoId}/file`, {
+    responseType: "blob",
+  });
+
+  return response.data;
+}
+
+export async function updateMyVehicleMileage(
+  currentMileage: number
+): Promise<{ current_mileage: number }> {
+  const { data } = await api.patch("/my-vehicle/mileage", {
+    current_mileage: currentMileage,
+  });
+
+  return data;
+}
+
 export async function getMyVehicle(): Promise<MyVehicleResponse> {
   const { data } = await api.get<MyVehicleResponse>("/my-vehicle");
   return data;

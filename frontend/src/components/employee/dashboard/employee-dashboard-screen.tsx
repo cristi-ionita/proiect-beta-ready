@@ -28,7 +28,7 @@ export default function EmployeeDashboardScreen() {
   const cards: EmployeeCardConfig[] = [
     {
       key: "approveVehicle",
-      title: t("vehicles", "detailsTitle"),
+      title: t("vehicles", "takeVehicle"),
       icon: <CheckCircle2 className="h-6 w-6" />,
       accent: "emerald",
       href: "/employee/my-vehicle/check-vehicle?from=dashboard",

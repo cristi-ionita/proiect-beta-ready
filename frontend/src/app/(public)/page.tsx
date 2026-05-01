@@ -13,7 +13,7 @@ import { getSession } from "@/lib/auth";
 
 function LoginPageShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] px-4 py-8">
+    <main className="relative flex min-h-dvh items-center justify-center bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] px-4 py-8">
       <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
         <LanguageSwitcher variant="dark" align="right" />
       </div>
@@ -39,7 +39,7 @@ function LoginPageHeader({ title }: { title: string }) {
 
 function LoginPageCheckingState({ label }: { label: string }) {
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] px-4">
+    <main className="relative flex min-h-dvh items-center justify-center bg-[radial-gradient(circle_at_top,#334155_0%,#1e293b_42%,#0f172a_100%)] px-4">
       <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
         <LanguageSwitcher variant="dark" align="right" />
       </div>

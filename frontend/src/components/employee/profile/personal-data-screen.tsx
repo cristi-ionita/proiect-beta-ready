@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CreditCard, MapPin, Phone, Save, User } from "lucide-react";
+import { CreditCard, MapPin, Phone, Save, User } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import Alert from "@/components/ui/alert";
@@ -147,7 +147,6 @@ export default function PersonalProfileScreen() {
         variant="back"
         onClick={() => router.push("/employee/profile")}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

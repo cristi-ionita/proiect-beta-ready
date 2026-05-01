@@ -20,18 +20,18 @@ export default function FormField({
   className,
 }: FormFieldProps) {
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-300">
+    <div className={cn("min-w-0 space-y-1.5", className)}>
+      <label className="block min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-300">
         {label}
         {required ? <span className="ml-1 text-rose-400">*</span> : null}
       </label>
 
-      {children}
+      <div className="min-w-0">{children}</div>
 
       {error ? (
-        <p className="text-xs text-rose-400">{error}</p>
+        <p className="break-words text-xs text-rose-400">{error}</p>
       ) : hint ? (
-        <p className="text-xs text-slate-400">{hint}</p>
+        <p className="break-words text-xs text-slate-400">{hint}</p>
       ) : null}
     </div>
   );

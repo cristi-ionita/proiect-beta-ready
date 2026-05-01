@@ -5,7 +5,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type MouseEvent,
   type ReactNode,
 } from "react";
 import { useSearchParams } from "next/navigation";
@@ -21,8 +20,6 @@ import {
   UserRound,
 } from "lucide-react";
 
-import Alert from "@/components/ui/alert";
-import { useOnboardingGuard } from "@/hooks/use-onboarding-guard";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
 import { locales, type Locale } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
@@ -38,7 +35,6 @@ type NavigationItem = {
   href: string;
   label: string;
   icon: ReactNode;
-  requiresOnboarding?: boolean;
 };
 
 const languageNames: Record<Locale, string> = {
@@ -57,10 +53,7 @@ export default function UserSidebar({
   const from = searchParams.get("from");
 
   const { locale, setLocale, t } = useSafeI18n();
-  const { onboardingComplete } = useOnboardingGuard();
-
   const [languageOpen, setLanguageOpen] = useState(false);
-  const [blockedMessage, setBlockedMessage] = useState("");
 
   const navigation: NavigationItem[] = useMemo(
     () => [
@@ -68,37 +61,31 @@ export default function UserSidebar({
         href: "/employee/dashboard",
         label: t("nav", "dashboard"),
         icon: <Gauge className="h-5 w-5" />,
-        requiresOnboarding: false,
       },
       {
         href: "/employee/profile",
         label: t("nav", "profile"),
         icon: <UserRound className="h-5 w-5" />,
-        requiresOnboarding: false,
       },
       {
         href: "/employee/my-vehicle",
         label: t("nav", "myVehicle"),
         icon: <CarFront className="h-5 w-5" />,
-        requiresOnboarding: true,
       },
       {
         href: "/employee/issues",
         label: t("nav", "issues"),
         icon: <TriangleAlert className="h-5 w-5" />,
-        requiresOnboarding: true,
       },
       {
         href: "/employee/documents",
         label: t("nav", "documents"),
         icon: <FileText className="h-5 w-5" />,
-        requiresOnboarding: true,
       },
       {
         href: "/employee/leave",
         label: t("nav", "leave"),
         icon: <CalendarDays className="h-5 w-5" />,
-        requiresOnboarding: true,
       },
     ],
     [t]
@@ -109,21 +96,10 @@ export default function UserSidebar({
   }, [pathname]);
 
   useEffect(() => {
-    if (!blockedMessage) return;
-
-    const timeout = window.setTimeout(() => {
-      setBlockedMessage("");
-    }, 3500);
-
-    return () => window.clearTimeout(timeout);
-  }, [blockedMessage]);
-
-  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
 
       setLanguageOpen(false);
-      setBlockedMessage("");
 
       if (open) onClose();
     }
@@ -149,33 +125,8 @@ export default function UserSidebar({
     return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
   }
 
-  function handleNavigationClick(
-    event: MouseEvent<HTMLAnchorElement>,
-    item: NavigationItem
-  ) {
-    setLanguageOpen(false);
-
-    if (item.requiresOnboarding && !onboardingComplete) {
-      event.preventDefault();
-
-      setBlockedMessage(
-        "Trebuie să completezi datele personale și documentele obligatorii înainte de a continua."
-      );
-
-      return;
-    }
-
-    onClose();
-  }
-
   return (
     <>
-      {blockedMessage ? (
-        <div className="fixed left-1/2 top-5 z-[80] w-[calc(100%-32px)] max-w-md -translate-x-1/2">
-          <Alert variant="warning" message={blockedMessage} />
-        </div>
-      ) : null}
-
       {open ? (
         <button
           type="button"
@@ -197,8 +148,8 @@ export default function UserSidebar({
         )}
         aria-label="User sidebar"
       >
-        <div className="flex h-full flex-col px-2 py-5">
-          <div className="relative mb-4">
+        <div className="flex h-dvh flex-col overflow-hidden px-2 py-5">
+          <div className="relative mb-4 shrink-0">
             <button
               type="button"
               onClick={() => setLanguageOpen((current) => !current)}
@@ -247,27 +198,24 @@ export default function UserSidebar({
             ) : null}
           </div>
 
-          <nav className="flex flex-1 flex-col items-center gap-2">
+          <nav className="flex flex-1 flex-col items-center gap-2 overflow-y-auto overscroll-contain pb-4">
             {navigation.map((item) => {
               const isActive = isItemActive(item.href);
-              const isBlocked = Boolean(
-                item.requiresOnboarding && !onboardingComplete
-              );
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={(event) => handleNavigationClick(event, item)}
+                  onClick={() => {
+                    setLanguageOpen(false);
+                    onClose();
+                  }}
                   aria-current={isActive ? "page" : undefined}
-                  aria-disabled={isBlocked}
                   className={cn(
                     "flex w-full flex-col items-center justify-center gap-1.5 rounded-xl p-2.5 transition",
                     isActive
                       ? "bg-white text-slate-950"
-                      : "text-slate-300 hover:bg-white/10 hover:text-white",
-                    isBlocked &&
-                      "cursor-not-allowed opacity-45 hover:bg-transparent hover:text-slate-300"
+                      : "text-slate-300 hover:bg-white/10 hover:text-white"
                   )}
                 >
                   <span
@@ -294,7 +242,7 @@ export default function UserSidebar({
             })}
           </nav>
 
-          <div className="mt-4">
+          <div className="shrink-0 pt-4">
             <button
               type="button"
               onClick={() => {

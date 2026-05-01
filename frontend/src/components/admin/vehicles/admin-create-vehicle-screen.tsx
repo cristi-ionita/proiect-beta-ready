@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, CarFront, FileText, Trash2 } from "lucide-react";
+import { Camera, CarFront, FileText, Trash2 } from "lucide-react";
 
 import Alert from "@/components/ui/alert";
 import AppModal from "@/components/ui/app-modal";
@@ -138,7 +138,6 @@ export default function AdminCreateVehicleScreen() {
         variant="back"
         onClick={() => router.push("/admin/vehicles")}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

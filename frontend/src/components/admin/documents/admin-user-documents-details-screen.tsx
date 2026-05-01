@@ -2,14 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Download,
-  FileText,
-  Mail,
-  Shield,
-  User,
-} from "lucide-react";
+import { FileText, Mail, Shield, User } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import ListChip from "@/components/patterns/list-chip";
@@ -72,7 +65,6 @@ export default function AdminDocumentsDetailsScreen({ userId }: Props) {
   const [documentsError, setDocumentsError] = useState(false);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [previewLoadingId, setPreviewLoadingId] = useState<number | null>(null);
-  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const fallback = "—";
 
@@ -153,27 +145,15 @@ export default function AdminDocumentsDetailsScreen({ userId }: Props) {
     }
   }
 
-  async function handleDownload(document: DocumentItem) {
-    try {
-      setDownloadingId(document.id);
-      setDocumentsError(false);
+  function downloadPreview() {
+    if (!preview) return;
 
-      const blob = await adminDownloadDocumentFile(document.id);
-      const url = URL.createObjectURL(blob);
-
-      const anchor = window.document.createElement("a");
-      anchor.href = url;
-      anchor.download = document.file_name || "document";
-      window.document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-
-      URL.revokeObjectURL(url);
-    } catch {
-      setDocumentsError(true);
-    } finally {
-      setDownloadingId(null);
-    }
+    const anchor = window.document.createElement("a");
+    anchor.href = preview.url;
+    anchor.download = preview.fileName || "document";
+    window.document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
   }
 
   return (
@@ -182,7 +162,6 @@ export default function AdminDocumentsDetailsScreen({ userId }: Props) {
         variant="back"
         onClick={() => router.push("/admin/documents/user-documents")}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 
@@ -197,15 +176,15 @@ export default function AdminDocumentsDetailsScreen({ userId }: Props) {
         <SectionCard title={t("documents", "user")}>
           {user ? (
             <ListRow
-              leading={<User className="h-4 w-4" />}
+              leading={<User className="h-4 w-4 shrink-0" />}
               title={user.full_name || fallback}
               meta={
                 <>
-                  <ListChip icon={<Mail className="h-3 w-3" />}>
+                  <ListChip icon={<Mail className="h-3 w-3 shrink-0" />}>
                     {rawUser?.email || fallback}
                   </ListChip>
 
-                  <ListChip icon={<Shield className="h-3 w-3" />}>
+                  <ListChip icon={<Shield className="h-3 w-3 shrink-0" />}>
                     {t("common", "shift")}: {user.shift_number || fallback}
                   </ListChip>
                 </>
@@ -225,11 +204,9 @@ export default function AdminDocumentsDetailsScreen({ userId }: Props) {
           >
             <div className="space-y-3">
               {USER_DOCUMENT_TYPES.map((type) => {
-                const document = getDocument(type);
+                const documentItem = getDocument(type);
                 const isPreviewLoading =
-                  document !== null && previewLoadingId === document.id;
-                const isDownloading =
-                  document !== null && downloadingId === document.id;
+                  documentItem !== null && previewLoadingId === documentItem.id;
 
                 return (
                   <SectionCard
@@ -237,37 +214,15 @@ export default function AdminDocumentsDetailsScreen({ userId }: Props) {
                     title={getDocumentLabel(type)}
                     icon={<FileText className="h-5 w-5" />}
                   >
-                    {document ? (
+                    {documentItem ? (
                       <ListRow
-                        leading={<FileText className="h-4 w-4" />}
+                        leading={<FileText className="h-4 w-4 shrink-0" />}
                         title={
                           isPreviewLoading
                             ? t("documents", "opening")
-                            : document.file_name || fallback
+                            : documentItem.file_name || fallback
                         }
-                        actions={
-                          <div className="flex flex-wrap justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              loading={isPreviewLoading}
-                              disabled={isPreviewLoading}
-                              onClick={() => void openPreview(document)}
-                            >
-                              {t("documents", "viewDocument")}
-                            </Button>
-
-                            <Button
-                              size="sm"
-                              loading={isDownloading}
-                              disabled={isDownloading}
-                              onClick={() => void handleDownload(document)}
-                            >
-                              <Download className="h-4 w-4" />
-                              {t("documents", "download")}
-                            </Button>
-                          </div>
-                        }
+                        onClick={() => void openPreview(documentItem)}
                       />
                     ) : (
                       <p className="text-sm text-slate-400">
@@ -288,19 +243,27 @@ export default function AdminDocumentsDetailsScreen({ userId }: Props) {
         title={preview?.fileName}
       >
         {preview ? (
-          preview.type.includes("image") ? (
-            <img
-              src={preview.url}
-              alt={t("documents", "documentPreview")}
-              className="max-h-[70vh] w-full rounded-xl object-contain"
-            />
-          ) : (
-            <iframe
-              src={preview.url}
-              title={t("documents", "documentPreview")}
-              className="h-[70vh] w-full rounded-xl bg-white"
-            />
-          )
+          <div className="space-y-3">
+            <div className="flex justify-end">
+              <Button size="sm" onClick={downloadPreview}>
+                {t("documents", "download")}
+              </Button>
+            </div>
+
+            {preview.type.includes("image") ? (
+              <img
+                src={preview.url}
+                alt={t("documents", "documentPreview")}
+                className="max-h-[70vh] w-full rounded-xl object-contain"
+              />
+            ) : (
+              <iframe
+                src={preview.url}
+                title={t("documents", "documentPreview")}
+                className="h-[70vh] w-full rounded-xl bg-white"
+              />
+            )}
+          </div>
         ) : null}
       </AppModal>
     </div>

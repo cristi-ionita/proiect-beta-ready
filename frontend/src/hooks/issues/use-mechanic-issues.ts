@@ -2,22 +2,28 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { listMechanicIssues } from "@/services/issues.api";
 import { isApiClientError } from "@/lib/api-error";
-import type { IssueItem } from "@/types/issue.types";
+import { listMechanicIssues } from "@/services/issues.api";
+import {
+  VEHICLE_ISSUE_STATUS,
+  type IssueItem,
+} from "@/types/issue.types";
 
 type MechanicIssuesCounts = {
   total: number;
-  open: number;
   scheduled: number;
+  inProgress: number;
   resolved: number;
+  canceled: number;
 };
 
 type UseMechanicIssuesResult = {
   issues: IssueItem[];
-  openIssues: IssueItem[];
   scheduledIssues: IssueItem[];
+  inProgressIssues: IssueItem[];
   resolvedIssues: IssueItem[];
+  canceledIssues: IssueItem[];
+  activeIssues: IssueItem[];
   counts: MechanicIssuesCounts;
   loading: boolean;
   error: string;
@@ -56,39 +62,65 @@ export function useMechanicIssues(): UseMechanicIssuesResult {
     void load();
   }, [load]);
 
-  const openIssues = useMemo(() => {
-    return issues.filter((item) => {
-      const status = normalizeStatus(item.status);
-      return status === "open" || status === "in_progress";
-    });
-  }, [issues]);
-
   const scheduledIssues = useMemo(() => {
     return issues.filter(
-      (item) => normalizeStatus(item.status) === "scheduled"
+      (item) => normalizeStatus(item.status) === VEHICLE_ISSUE_STATUS.SCHEDULED
+    );
+  }, [issues]);
+
+  const inProgressIssues = useMemo(() => {
+    return issues.filter(
+      (item) =>
+        normalizeStatus(item.status) === VEHICLE_ISSUE_STATUS.IN_PROGRESS
     );
   }, [issues]);
 
   const resolvedIssues = useMemo(() => {
     return issues.filter(
-      (item) => normalizeStatus(item.status) === "resolved"
+      (item) => normalizeStatus(item.status) === VEHICLE_ISSUE_STATUS.RESOLVED
     );
+  }, [issues]);
+
+  const canceledIssues = useMemo(() => {
+    return issues.filter(
+      (item) => normalizeStatus(item.status) === VEHICLE_ISSUE_STATUS.CANCELED
+    );
+  }, [issues]);
+
+  const activeIssues = useMemo(() => {
+    return issues.filter((item) => {
+      const status = normalizeStatus(item.status);
+
+      return (
+        status === VEHICLE_ISSUE_STATUS.SCHEDULED ||
+        status === VEHICLE_ISSUE_STATUS.IN_PROGRESS
+      );
+    });
   }, [issues]);
 
   const counts = useMemo<MechanicIssuesCounts>(() => {
     return {
       total: issues.length,
-      open: openIssues.length,
       scheduled: scheduledIssues.length,
+      inProgress: inProgressIssues.length,
       resolved: resolvedIssues.length,
+      canceled: canceledIssues.length,
     };
-  }, [issues.length, openIssues.length, scheduledIssues.length, resolvedIssues.length]);
+  }, [
+    issues.length,
+    scheduledIssues.length,
+    inProgressIssues.length,
+    resolvedIssues.length,
+    canceledIssues.length,
+  ]);
 
   return {
     issues,
-    openIssues,
     scheduledIssues,
+    inProgressIssues,
     resolvedIssues,
+    canceledIssues,
+    activeIssues,
     counts,
     loading,
     error,

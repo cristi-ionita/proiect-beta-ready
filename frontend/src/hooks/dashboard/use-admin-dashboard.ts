@@ -21,6 +21,14 @@ const initialData: AdminDashboardData = {
   todayLeaves: 0,
   availableVehicles: 0,
   pendingUsers: 0,
+  issuesSummary: {
+    total: 0,
+    open: 0,
+    scheduled: 0,
+    in_progress: 0,
+    resolved: 0,
+    canceled: 0,
+  },
   issues: [],
   activeAssignments: [],
 };
@@ -33,6 +41,7 @@ function mapAdminDashboardData(
     todayLeaves: summary.users.on_leave_today,
     availableVehicles: summary.vehicles.available,
     pendingUsers: summary.users.pending,
+    issuesSummary: summary.issues,
     issues: Array.isArray(summary.recent_issues) ? summary.recent_issues : [],
     activeAssignments: Array.isArray(summary.active_assignments)
       ? summary.active_assignments

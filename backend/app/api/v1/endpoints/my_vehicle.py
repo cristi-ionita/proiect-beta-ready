@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi import Body
 from app.api.v1.dependencies import require_employee
 from app.db.models.user import User
 from app.db.models.vehicle import VehicleStatus
@@ -358,3 +359,28 @@ async def get_photo(
         media_type=photo.mime_type,
         filename=photo.file_name,
     )
+
+@router.patch("/mileage")
+async def update_my_vehicle_mileage(
+    current_mileage: int = Body(..., embed=True, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_employee),
+):
+    assignment = await _get_open_assignment_for_user(db, current_user.id)
+
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="No active assignment.")
+
+    if assignment.status != AssignmentStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Assignment is not active.")
+
+    await db.refresh(assignment, attribute_names=["vehicle"])
+
+    assignment.vehicle.current_mileage = current_mileage
+
+    await db.commit()
+    await db.refresh(assignment.vehicle)
+
+    return {
+        "current_mileage": assignment.vehicle.current_mileage,
+    }

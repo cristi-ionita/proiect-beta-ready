@@ -5,7 +5,16 @@ import uuid
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Path as PathParam, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Path as PathParam,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,10 +37,28 @@ router = APIRouter(prefix="/vehicle-issues", tags=["vehicle-issues"])
 
 UPLOAD_DIR = Path("uploads/issues").resolve()
 
-ALLOWED_PHOTO_MIME_TYPES = {"image/png", "image/jpeg"}
+ALLOWED_PHOTO_MIME_TYPES = {
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    "image/gif",
+    "image/bmp",
+    "image/tiff",
+    "image/x-tiff",
+}
+
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 JPEG_SIGNATURE_START = b"\xff\xd8"
-JPEG_SIGNATURE_END = b"\xff\xd9"
+WEBP_SIGNATURE_START = b"RIFF"
+WEBP_SIGNATURE_FORMAT = b"WEBP"
+GIF_SIGNATURE_87A = b"GIF87a"
+GIF_SIGNATURE_89A = b"GIF89a"
+BMP_SIGNATURE = b"BM"
+TIFF_SIGNATURE_LE = b"II*\x00"
+TIFF_SIGNATURE_BE = b"MM\x00*"
 
 
 def _bad_request(detail: str) -> None:
@@ -56,42 +83,55 @@ def _detect_file_size(file: UploadFile) -> int:
     return size
 
 
-def _read_file_edges(
-    file: UploadFile,
-    max_prefix: int = 16,
-    max_suffix: int = 2,
-) -> tuple[bytes, bytes]:
+def _read_file_prefix(file: UploadFile, max_prefix: int = 32) -> bytes:
     file.file.seek(0)
     prefix = file.file.read(max_prefix)
-
-    file.file.seek(0, 2)
-    file_size = file.file.tell()
-
-    if file_size >= max_suffix:
-        file.file.seek(file_size - max_suffix)
-        suffix = file.file.read(max_suffix)
-    else:
-        file.file.seek(0)
-        suffix = file.file.read()
-
     file.file.seek(0)
 
-    return prefix, suffix
+    return prefix
 
 
 def _validate_photo_signature(file: UploadFile) -> None:
-    prefix, suffix = _read_file_edges(file)
+    content_type = file.content_type or ""
+    prefix = _read_file_prefix(file)
 
-    if file.content_type == "image/png":
+    if content_type == "image/png":
         if not prefix.startswith(PNG_SIGNATURE):
             _bad_request("Invalid PNG file.")
         return
 
-    if file.content_type == "image/jpeg":
-        if not prefix.startswith(JPEG_SIGNATURE_START) or not suffix.endswith(
-            JPEG_SIGNATURE_END
-        ):
+    if content_type in {"image/jpeg", "image/jpg"}:
+        if not prefix.startswith(JPEG_SIGNATURE_START):
             _bad_request("Invalid JPEG file.")
+        return
+
+    if content_type == "image/webp":
+        if not prefix.startswith(WEBP_SIGNATURE_START) or WEBP_SIGNATURE_FORMAT not in prefix:
+            _bad_request("Invalid WEBP file.")
+        return
+
+    if content_type == "image/gif":
+        if not (
+            prefix.startswith(GIF_SIGNATURE_87A)
+            or prefix.startswith(GIF_SIGNATURE_89A)
+        ):
+            _bad_request("Invalid GIF file.")
+        return
+
+    if content_type == "image/bmp":
+        if not prefix.startswith(BMP_SIGNATURE):
+            _bad_request("Invalid BMP file.")
+        return
+
+    if content_type in {"image/tiff", "image/x-tiff"}:
+        if not (
+            prefix.startswith(TIFF_SIGNATURE_LE)
+            or prefix.startswith(TIFF_SIGNATURE_BE)
+        ):
+            _bad_request("Invalid TIFF file.")
+        return
+
+    if content_type in {"image/heic", "image/heif"}:
         return
 
     _bad_request("Unsupported photo type.")
@@ -111,7 +151,8 @@ def _validate_photo(file: UploadFile) -> int:
 
     if file_size > settings.MAX_UPLOAD_SIZE_BYTES:
         _bad_request(
-            f"Photo too large. Maximum allowed size is {settings.MAX_UPLOAD_SIZE_BYTES} bytes."
+            f"Photo too large. Maximum allowed size is "
+            f"{settings.MAX_UPLOAD_SIZE_BYTES} bytes."
         )
 
     _validate_photo_signature(file)
@@ -121,15 +162,25 @@ def _validate_photo(file: UploadFile) -> int:
 
 
 def _extension_for_mime_type(mime_type: str) -> str:
-    if mime_type == "image/png":
-        return ".png"
+    extensions = {
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+        "image/jpg": ".jpg",
+        "image/webp": ".webp",
+        "image/heic": ".heic",
+        "image/heif": ".heif",
+        "image/gif": ".gif",
+        "image/bmp": ".bmp",
+        "image/tiff": ".tiff",
+        "image/x-tiff": ".tiff",
+    }
 
-    if mime_type == "image/jpeg":
-        return ".jpg"
+    extension = extensions.get(mime_type)
 
-    _bad_request("Unsupported photo type.")
+    if extension is None:
+        _bad_request("Unsupported photo type.")
 
-    return ""
+    return extension
 
 
 def _resolve_issue_photo_path(file_path: str) -> Path:

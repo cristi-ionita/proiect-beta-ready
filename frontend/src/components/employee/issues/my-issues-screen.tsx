@@ -1,19 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AlertTriangle,
-  CalendarDays,
-  CarFront,
-  Clock,
-  ClipboardList,
-  PlusCircle,
-  ShieldAlert,
-} from "lucide-react";
+import { CalendarDays, Clock, MessageSquareText, Plus } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
-import ListChip from "@/components/patterns/list-chip";
-import ListRow from "@/components/patterns/list-row";
+import AppModal from "@/components/ui/app-modal";
 import Button from "@/components/ui/button";
 import SectionCard from "@/components/ui/section-card";
 import StatusBadge from "@/components/ui/status-badge";
@@ -33,7 +25,7 @@ function formatDateParts(value?: string | null) {
   return {
     date: new Intl.DateTimeFormat("ro-RO", {
       day: "2-digit",
-      month: "2-digit",
+      month: "short",
       year: "numeric",
     }).format(parsed),
     time: new Intl.DateTimeFormat("ro-RO", {
@@ -41,6 +33,10 @@ function formatDateParts(value?: string | null) {
       minute: "2-digit",
     }).format(parsed),
   };
+}
+
+function normalizeStatus(status?: string | null) {
+  return String(status ?? "").trim().toLowerCase();
 }
 
 function getStatusVariant(status: string) {
@@ -52,35 +48,19 @@ function getStatusVariant(status: string) {
   return "danger";
 }
 
-function getStatusLabel(status: string, t: ReturnType<typeof useSafeI18n>["t"]) {
-  if (status === "scheduled") return t("issues", "scheduled");
-  if (status === "in_progress") return t("issues", "inProgress");
-  if (status === "resolved") return t("issues", "resolved");
-  if (status === "canceled") return t("issues", "canceled");
+function getStatusLabel(issue: IssueItem) {
+  const status = normalizeStatus(issue.status);
 
-  return t("issues", "open");
-}
-
-function getReportedItems(issue: IssueItem, t: ReturnType<typeof useSafeI18n>["t"]) {
-  const items: string[] = [];
-
-  if (issue.need_brakes) items.push(t("issues", "brakes"));
-  if (issue.need_tires) items.push(t("issues", "tires"));
-  if (issue.need_oil) items.push(t("issues", "oil"));
-
-  if (issue.need_service_in_km != null) {
-    items.push(`${t("issues", "serviceInKm")}: ${issue.need_service_in_km} km`);
+  if (status === "open" && issue.assigned_mechanic_id) {
+    return "Trimisă";
   }
 
-  if (issue.dashboard_checks?.trim()) {
-    items.push(issue.dashboard_checks.trim());
-  }
+  if (status === "scheduled") return "Programată";
+  if (status === "in_progress") return "În lucru";
+  if (status === "resolved") return "Rezolvată";
+  if (status === "canceled") return "Anulată";
 
-  if (issue.other_problems?.trim()) {
-    items.push(issue.other_problems.trim());
-  }
-
-  return items;
+  return "Raportată";
 }
 
 export default function MyIssuesScreen() {
@@ -88,70 +68,155 @@ export default function MyIssuesScreen() {
   const { t } = useSafeI18n();
   const { data, loading, error } = useMyIssues();
 
+  const [selectedIssue, setSelectedIssue] = useState<IssueItem | null>(null);
+
+  const selectedStatus = normalizeStatus(selectedIssue?.status);
+  const scheduledAt = formatDateParts(selectedIssue?.scheduled_for);
+
   return (
-    <SectionCard
-      title={t("issues", "historyTitle")}
-      icon={<ClipboardList className="h-5 w-5" />}
-      actions={
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => router.push("/employee/issues/report?from=issues")}
-        >
-          <PlusCircle className="h-4 w-4" />
-          {t("issues", "reportIssue")}
-        </Button>
-      }
-    >
-      <DataStateBoundary
-        isLoading={loading}
-        isError={Boolean(error)}
-        errorMessage={error ?? t("issues", "failedToLoad")}
-        isEmpty={data.length === 0}
-        emptyTitle={t("issues", "reportedIssuesEmptyTitle")}
-        emptyDescription={t("issues", "reportedIssuesEmptyDescription")}
+    <>
+      <SectionCard
+        title={t("issues", "historyTitle")}
+        actions={
+          <Button
+            type="button"
+            size="sm"
+            className="flex h-9 w-9 items-center justify-center p-0"
+            onClick={() => router.push("/employee/issues/report?from=issues")}
+            aria-label={t("issues", "reportIssue")}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        }
       >
-        <div className="space-y-2.5">
-          {data.map((issue) => {
-            const createdAt = formatDateParts(issue.created_at);
-            const reportedItems = getReportedItems(issue, t);
+        <DataStateBoundary
+          isLoading={loading}
+          isError={Boolean(error)}
+          errorMessage={error ?? t("issues", "failedToLoad")}
+          isEmpty={data.length === 0}
+          emptyTitle={t("issues", "reportedIssuesEmptyTitle")}
+          emptyDescription={t("issues", "reportedIssuesEmptyDescription")}
+        >
+          <div className="space-y-2.5">
+            {data.map((issue) => {
+              const createdAt = formatDateParts(issue.created_at);
 
-            return (
-              <ListRow
-                key={issue.id}
-                leading={<ShieldAlert className="h-4 w-4" />}
-                title={issue.vehicle_license_plate || "—"}
-                subtitle={
-                  reportedItems.length > 0
-                    ? reportedItems.join(" · ")
-                    : t("issues", "issueHintNone")
-                }
-                badge={
-                  <StatusBadge
-                    label={getStatusLabel(issue.status, t)}
-                    variant={getStatusVariant(issue.status)}
-                  />
-                }
-                meta={
-                  <>
-                    <ListChip icon={<CarFront className="h-3 w-3" />} variant="blue">
+              return (
+                <button
+                  key={issue.id}
+                  type="button"
+                  onClick={() => setSelectedIssue(issue)}
+                  className="flex w-full items-center gap-3 rounded-3xl border border-white/10 bg-white/10 p-4 text-left transition hover:bg-white/15"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-white">
                       {issue.vehicle_license_plate || "—"}
-                    </ListChip>
+                    </p>
 
-                    <ListChip icon={<CalendarDays className="h-3 w-3" />}>
-                      {createdAt.date}
-                    </ListChip>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-400">
+                      <span>{createdAt.date}</span>
+                      <span>•</span>
+                      <span>{createdAt.time}</span>
+                    </div>
+                  </div>
 
-                    <ListChip icon={<Clock className="h-3 w-3" />}>
-                      {createdAt.time}
-                    </ListChip>
-                  </>
-                }
-              />
-            );
-          })}
-        </div>
-      </DataStateBoundary>
-    </SectionCard>
+                  <StatusBadge
+                    label={getStatusLabel(issue)}
+                    variant={getStatusVariant(normalizeStatus(issue.status))}
+                    size="sm"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </DataStateBoundary>
+      </SectionCard>
+
+      <AppModal
+        open={Boolean(selectedIssue)}
+        onClose={() => setSelectedIssue(null)}
+        title={selectedIssue?.vehicle_license_plate || "Problemă"}
+      >
+        {selectedIssue ? (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                Status
+              </p>
+
+              <div className="mt-2">
+                <StatusBadge
+                  label={getStatusLabel(selectedIssue)}
+                  variant={getStatusVariant(selectedStatus)}
+                />
+              </div>
+            </div>
+
+            {selectedIssue.scheduled_for ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Data programării
+                  </p>
+
+                  <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-white">
+                    <CalendarDays className="h-4 w-4 shrink-0" />
+                    {scheduledAt.date}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Ora
+                  </p>
+
+                  <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-white">
+                    <Clock className="h-4 w-4 shrink-0" />
+                    {scheduledAt.time}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-semibold text-slate-300">
+                Problema nu a fost încă programată de mecanic.
+              </p>
+            )}
+
+            {selectedIssue.scheduled_location ? (
+              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Mesaj de la mecanic
+                </p>
+
+                <p className="mt-2 flex items-start gap-2 whitespace-pre-line text-sm font-semibold text-white">
+                  <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0" />
+                  {selectedIssue.scheduled_location}
+                </p>
+              </div>
+            ) : null}
+
+            {selectedIssue.resolution_notes ? (
+              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  Notițe rezolvare
+                </p>
+
+                <p className="mt-2 whitespace-pre-line text-sm font-semibold text-white">
+                  {selectedIssue.resolution_notes}
+                </p>
+              </div>
+            ) : null}
+
+            <div className="flex justify-end border-t border-white/10 pt-4">
+              <Button type="button" onClick={() => setSelectedIssue(null)}>
+                {selectedStatus === "scheduled"
+                  ? "Confirmă programarea"
+                  : "Închide"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </AppModal>
+    </>
   );
 }

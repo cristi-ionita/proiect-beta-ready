@@ -131,7 +131,7 @@ export function useAdminAssignments({
   }, [load]);
 
   const createAssignmentAction = useCallback(
-    async (userId: number, vehicleId: number) => {
+    async (userId: number, vehicleId: number, shiftNumber: number) => {
       try {
         setSaving(true);
         setError("");
@@ -139,6 +139,7 @@ export function useAdminAssignments({
         await createAssignment({
           user_id: userId,
           vehicle_id: vehicleId,
+          shift_number: shiftNumber,
         });
 
         await load();

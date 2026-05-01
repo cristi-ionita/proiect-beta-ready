@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import AppModal from "@/components/ui/app-modal";
 import Button from "@/components/ui/button";
 
+type ConfirmDialogVariant = "primary" | "danger";
+
 type ConfirmDialogProps = {
   open: boolean;
   title?: string;
@@ -14,6 +16,7 @@ type ConfirmDialogProps = {
   cancelText?: string;
   loading?: boolean;
   loadingText?: string;
+  confirmVariant?: ConfirmDialogVariant;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -27,11 +30,13 @@ export default function ConfirmDialog({
   cancelText = "Anulează",
   loading = false,
   loadingText = "Se procesează...",
+  confirmVariant = "danger",
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   function handleClose() {
-    if (!loading) onCancel();
+    if (loading) return;
+    onCancel();
   }
 
   return (
@@ -45,7 +50,7 @@ export default function ConfirmDialog({
 
         {children ? <div>{children}</div> : null}
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="secondary"
@@ -57,7 +62,7 @@ export default function ConfirmDialog({
 
           <Button
             type="button"
-            variant="danger"
+            variant={confirmVariant === "danger" ? "danger" : "primary"}
             onClick={onConfirm}
             disabled={loading}
             loading={loading}

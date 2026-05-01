@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.models.user import User
-from app.db.models.vehicle import Vehicle
 from app.db.models.vehicle_assignment import AssignmentStatus, VehicleAssignment
 from app.db.models.vehicle_issue import VehicleIssue, VehicleIssueStatus
 from app.schemas.user import UserRole
@@ -25,7 +24,6 @@ class VehicleIssueService:
     def normalize_optional_text(value: str | None) -> str | None:
         if value is None:
             return None
-
         cleaned = " ".join(value.strip().split())
         return cleaned or None
 
@@ -74,15 +72,16 @@ class VehicleIssueService:
             VehicleIssueStatus.CANCELED: set(),
         }
 
-        current_status = issue.status
-
-        if next_status == current_status:
+        if next_status == issue.status:
             return
 
-        if next_status not in allowed[current_status]:
+        if next_status not in allowed[issue.status]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid status transition from {current_status.value} to {next_status.value}.",
+                detail=(
+                    f"Invalid status transition from "
+                    f"{issue.status.value} to {next_status.value}."
+                ),
             )
 
     @staticmethod
@@ -106,20 +105,6 @@ class VehicleIssueService:
             )
 
         return issue
-
-    @staticmethod
-    async def get_vehicle_or_404(db: AsyncSession, vehicle_id: int) -> Vehicle:
-        vehicle = (
-            await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-        ).scalar_one_or_none()
-
-        if vehicle is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Vehicle not found.",
-            )
-
-        return vehicle
 
     @staticmethod
     async def get_user_or_404(db: AsyncSession, user_id: int) -> User:
@@ -373,8 +358,6 @@ class VehicleIssueService:
 
         forbidden_fields = {
             "assigned_mechanic_id",
-            "scheduled_for",
-            "scheduled_location",
             "estimated_cost",
             "priority",
         }

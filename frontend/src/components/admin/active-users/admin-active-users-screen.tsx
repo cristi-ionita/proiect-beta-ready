@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users } from "lucide-react";
+import { Users } from "lucide-react";
 
 import ActiveUserRow from "@/components/admin/active-users/active-user-row";
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
@@ -35,7 +35,6 @@ export default function AdminActiveUsersScreen() {
     >
       <div className="space-y-6">
         <Button variant="back" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
           {t("common", "back")}
         </Button>
 

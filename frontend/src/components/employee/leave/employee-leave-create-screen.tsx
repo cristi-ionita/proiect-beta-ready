@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send } from "lucide-react";
 
 import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
 import FormField from "@/components/ui/form-field";
-import Input from "@/components/ui/input";
 import SectionCard from "@/components/ui/section-card";
 import Textarea from "@/components/ui/textarea";
 import { ROUTES } from "@/constants/routes";
@@ -72,6 +70,9 @@ export default function EmployeeLeaveCreateScreen() {
     }
   }
 
+  const dateInputClass =
+  "block h-11 w-full min-w-0 appearance-none rounded-xl border border-white/10 bg-white/10 px-3 text-sm text-white outline-none backdrop-blur-md transition focus:border-white/20 focus:ring-2 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-60 leading-[2.75rem] [&::-webkit-datetime-edit]:flex [&::-webkit-datetime-edit]:items-center";
+
   return (
     <div className="space-y-4">
       <Button
@@ -79,34 +80,32 @@ export default function EmployeeLeaveCreateScreen() {
         variant="back"
         onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE)}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 
-      <SectionCard
-        title={t("leave", "submitLeaveRequest")}
-        icon={<Send className="h-5 w-5" />}
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <SectionCard title={t("leave", "submitLeaveRequest")}>
+        <form onSubmit={handleSubmit} className="w-full min-w-0 space-y-4 overflow-hidden">
           {error ? <Alert variant="error" message={error} /> : null}
           {success ? <Alert variant="success" message={success} /> : null}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField label={t("leave", "startDate")} required>
-              <Input
+          <div className="grid w-full min-w-0 grid-cols-1 gap-4 overflow-hidden sm:grid-cols-2">
+            <FormField label={t("leave", "startDate")} required className="min-w-0">
+              <input
                 type="date"
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
                 required
+                className={dateInputClass}
               />
             </FormField>
 
-            <FormField label={t("leave", "endDate")} required>
-              <Input
+            <FormField label={t("leave", "endDate")} required className="min-w-0">
+              <input
                 type="date"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
                 required
+                className={dateInputClass}
               />
             </FormField>
           </div>
@@ -120,17 +119,13 @@ export default function EmployeeLeaveCreateScreen() {
             />
           </FormField>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex w-full justify-end">
             <Button
-              type="button"
-              variant="secondary"
-              onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE)}
+              type="submit"
+              disabled={loading}
+              loading={loading}
+              className="w-auto px-5"
             >
-              {t("common", "cancel")}
-            </Button>
-
-            <Button type="submit" disabled={loading} loading={loading}>
-              <Send className="h-4 w-4" />
               {t("leave", "sendRequest")}
             </Button>
           </div>

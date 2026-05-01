@@ -1,21 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  AtSign,
-  Edit3,
-  Lock,
-  Mail,
-  Save,
-  UserRound,
-  X,
-} from "lucide-react";
+import { Edit3, Save, X } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
+import FormField from "@/components/ui/form-field";
 import Input from "@/components/ui/input";
 import SectionCard from "@/components/ui/section-card";
 import { useProfileSummary } from "@/hooks/profile/use-profile-summary";
@@ -30,7 +22,12 @@ type AccountFormState = {
   password: string;
 };
 
-type EditingField = "email" | "username" | "password" | null;
+type UpdateAccountPayload = {
+  email?: string | null;
+  username?: string | null;
+  current_password?: string;
+  password?: string;
+};
 
 export default function AccountProfileScreen() {
   const router = useRouter();
@@ -44,7 +41,14 @@ export default function AccountProfileScreen() {
     password: "",
   });
 
-  const [editingField, setEditingField] = useState<EditingField>(null);
+  const [initialForm, setInitialForm] = useState<AccountFormState>({
+    email: "",
+    username: "",
+    current_password: "",
+    password: "",
+  });
+
+  const [isEditing, setIsEditing] = useState(false);
   const [accountLoading, setAccountLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -62,25 +66,33 @@ export default function AccountProfileScreen() {
 
         if (!isMounted) return;
 
-        setForm({
+        const nextForm = {
           email: account?.email ?? data?.user.email ?? "",
           username: account?.username ?? data?.user.username ?? "",
           current_password: "",
           password: "",
-        });
+        };
+
+        setForm(nextForm);
+        setInitialForm(nextForm);
       } catch (err: unknown) {
         if (!isMounted) return;
 
         setSubmitError(
-          isApiClientError(err) ? err.message : t("profile", "failedToLoadAccount")
+          isApiClientError(err)
+            ? err.message
+            : t("profile", "failedToLoadAccount")
         );
 
-        setForm({
+        const fallbackForm = {
           email: data?.user.email ?? "",
           username: data?.user.username ?? "",
           current_password: "",
           password: "",
-        });
+        };
+
+        setForm(fallbackForm);
+        setInitialForm(fallbackForm);
       } finally {
         if (isMounted) setAccountLoading(false);
       }
@@ -103,29 +115,48 @@ export default function AccountProfileScreen() {
     setSubmitError("");
   }
 
+  function startEdit() {
+    setIsEditing(true);
+    setSuccessMessage("");
+    setSubmitError("");
+  }
+
   function cancelEdit() {
-    setEditingField(null);
+    setIsEditing(false);
     setSubmitError("");
     setSuccessMessage("");
-
-    setForm((current) => ({
-      ...current,
-      current_password: "",
-      password: "",
-    }));
+    setForm(initialForm);
   }
 
   async function handleSave() {
-    if (editingField === "password") {
+    const payload: UpdateAccountPayload = {};
+
+    if (form.email.trim() !== initialForm.email.trim()) {
+      payload.email = form.email.trim() || null;
+    }
+
+    if (form.username.trim() !== initialForm.username.trim()) {
+      payload.username = form.username.trim() || null;
+    }
+
+    if (form.password.trim()) {
       if (!form.current_password.trim()) {
         setSubmitError(t("profile", "currentPasswordRequired"));
         return;
       }
 
-      if (!form.password.trim()) {
-        setSubmitError(t("profile", "enterNewPassword"));
-        return;
-      }
+      payload.current_password = form.current_password.trim();
+      payload.password = form.password.trim();
+    }
+
+    if (Object.keys(payload).length === 0) {
+      setIsEditing(false);
+      setForm((current) => ({
+        ...current,
+        current_password: "",
+        password: "",
+      }));
+      return;
     }
 
     try {
@@ -133,25 +164,18 @@ export default function AccountProfileScreen() {
       setSuccessMessage("");
       setSubmitError("");
 
-      await updateMyAccount({
-        email: form.email.trim() || null,
-        username: form.username.trim() || null,
-        ...(editingField === "password"
-          ? {
-              current_password: form.current_password.trim(),
-              password: form.password.trim(),
-            }
-          : {}),
-      });
+      await updateMyAccount(payload);
 
-      setSuccessMessage(t("profile", "accountUpdated"));
-      setEditingField(null);
-
-      setForm((current) => ({
-        ...current,
+      const cleanForm = {
+        ...form,
         current_password: "",
         password: "",
-      }));
+      };
+
+      setForm(cleanForm);
+      setInitialForm(cleanForm);
+      setSuccessMessage(t("profile", "accountUpdated"));
+      setIsEditing(false);
     } catch (err: unknown) {
       const message = isApiClientError(err) ? err.message : "";
 
@@ -173,13 +197,24 @@ export default function AccountProfileScreen() {
         variant="back"
         onClick={() => router.push("/employee/profile")}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 
       <SectionCard
         title={t("profile", "loginSettings")}
-        icon={<UserRound className="h-5 w-5" />}
+        actions={
+          !isEditing ? (
+            <Button
+              type="button"
+              size="sm"
+              className="flex h-9 w-9 items-center justify-center p-0"
+              onClick={startEdit}
+              aria-label="Edit"
+            >
+              <Edit3 className="h-4 w-4" />
+            </Button>
+          ) : null
+        }
       >
         <DataStateBoundary
           isLoading={loading || accountLoading}
@@ -190,98 +225,80 @@ export default function AccountProfileScreen() {
           emptyDescription={t("profile", "accountDataUnavailable")}
         >
           <div className="space-y-4">
-            <div className="grid gap-5">
-              <AccountRow
-                icon={<Mail className="h-4 w-4" />}
-                label="Email"
-                isEditing={editingField === "email"}
-                onEdit={() => setEditingField("email")}
-                onCancel={cancelEdit}
-              >
-                {editingField === "email" ? (
+            <div className="rounded-3xl border border-white/10 bg-white/10 p-4">
+              <div className="grid gap-4">
+                <FormField label="Email">
                   <Input
                     type="email"
                     value={form.email}
+                    disabled={!isEditing || saving}
                     onChange={(event) =>
                       handleChange("email", event.target.value)
                     }
                     placeholder="email@example.com"
                   />
-                ) : (
-                  <p className="truncate text-sm font-semibold text-white">
-                    {form.email || "—"}
-                  </p>
-                )}
-              </AccountRow>
+                </FormField>
 
-              <AccountRow
-                icon={<AtSign className="h-4 w-4" />}
-                label={t("profile", "username")}
-                isEditing={editingField === "username"}
-                onEdit={() => setEditingField("username")}
-                onCancel={cancelEdit}
-              >
-                {editingField === "username" ? (
+                <FormField label={t("profile", "username")}>
                   <Input
                     type="text"
                     value={form.username}
+                    disabled={!isEditing || saving}
                     onChange={(event) =>
                       handleChange("username", event.target.value)
                     }
                     placeholder={t("profile", "enterUsername")}
                   />
-                ) : (
-                  <p className="truncate text-sm font-semibold text-white">
-                    {form.username || "—"}
-                  </p>
-                )}
-              </AccountRow>
+                </FormField>
 
-              <AccountRow
-                icon={<Lock className="h-4 w-4" />}
-                label={t("profile", "changePassword")}
-                isEditing={editingField === "password"}
-                onEdit={() => setEditingField("password")}
-                onCancel={cancelEdit}
-              >
-                {editingField === "password" ? (
-                  <div className="grid gap-3">
-                    <Input
-                      type="password"
-                      value={form.current_password}
-                      onChange={(event) =>
-                        handleChange("current_password", event.target.value)
-                      }
-                      placeholder={t("profile", "enterCurrentPassword")}
-                    />
+                {isEditing ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField label={t("profile", "enterCurrentPassword")}>
+                      <Input
+                        type="password"
+                        value={form.current_password}
+                        disabled={saving}
+                        onChange={(event) =>
+                          handleChange("current_password", event.target.value)
+                        }
+                        placeholder={t("profile", "enterCurrentPassword")}
+                      />
+                    </FormField>
 
-                    <Input
-                      type="password"
-                      value={form.password}
-                      onChange={(event) =>
-                        handleChange("password", event.target.value)
-                      }
-                      placeholder={t("profile", "enterNewPassword")}
-                    />
+                    <FormField label={t("profile", "enterNewPassword")}>
+                      <Input
+                        type="password"
+                        value={form.password}
+                        disabled={saving}
+                        onChange={(event) =>
+                          handleChange("password", event.target.value)
+                        }
+                        placeholder={t("profile", "enterNewPassword")}
+                      />
+                    </FormField>
                   </div>
-                ) : (
-                  <p className="text-sm font-semibold text-slate-300">
-                    {t("profile", "passwordHidden")}
-                  </p>
-                )}
-              </AccountRow>
+                ) : null}
+              </div>
             </div>
 
             {successMessage ? (
               <Alert variant="success" message={successMessage} />
             ) : null}
 
-            {submitError ? (
-              <Alert variant="error" message={submitError} />
-            ) : null}
+            {submitError ? <Alert variant="error" message={submitError} /> : null}
 
-            {editingField ? (
-              <div className="flex justify-end">
+            {isEditing ? (
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={cancelEdit}
+                  disabled={saving}
+                >
+                  <X className="h-4 w-4" />
+                  {t("common", "cancel")}
+                </Button>
+
                 <Button
                   type="button"
                   onClick={handleSave}
@@ -296,49 +313,6 @@ export default function AccountProfileScreen() {
           </div>
         </DataStateBoundary>
       </SectionCard>
-    </div>
-  );
-}
-
-function AccountRow({
-  icon,
-  label,
-  isEditing,
-  onEdit,
-  onCancel,
-  children,
-}: {
-  icon: ReactNode;
-  label: string;
-  isEditing: boolean;
-  onEdit: () => void;
-  onCancel: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)_auto] md:items-center">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/30 text-white">
-          {icon}
-        </div>
-
-        <p className="truncate text-sm font-semibold text-white">{label}</p>
-      </div>
-
-      <div className="min-w-0">{children}</div>
-
-      <div className="flex justify-end">
-        {isEditing ? (
-          <Button type="button" size="sm" variant="secondary" onClick={onCancel}>
-            <X className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button type="button" size="sm" variant="secondary" onClick={onEdit}>
-            <Edit3 className="h-4 w-4" />
-            Edit
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

@@ -136,7 +136,10 @@ def register_exception_handlers(app: FastAPI) -> None:
         language = get_language_from_headers(request.headers)
         error, code = _map_http_exception(exc)
         fallback_message, details = _extract_http_exception_details(exc.detail, code)
-        message = translate(code, language, fallback=fallback_message)
+        if isinstance(exc.detail, str):
+            message = fallback_message
+        else:
+            message = translate(code, language, fallback=fallback_message)
 
         return build_error_response(
             error=error,

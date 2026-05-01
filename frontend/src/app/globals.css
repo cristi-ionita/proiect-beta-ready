@@ -14,17 +14,21 @@
 html,
 body {
   min-height: 100%;
+  background: #0f172a;
 }
 
 html {
   color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at top, rgba(51, 65, 85, 0.55), transparent 34%),
     linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
@@ -36,6 +40,7 @@ body {
 *::before,
 *::after {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
@@ -61,6 +66,17 @@ a {
 }
 
 button,
+a,
+[role="button"],
+input,
+textarea,
+select,
+label {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button,
 input,
 select,
 textarea {
@@ -69,6 +85,7 @@ textarea {
 
 button {
   cursor: pointer;
+  user-select: none;
 }
 
 button:disabled {
@@ -90,8 +107,6 @@ select:focus-visible,
 textarea:focus-visible {
   box-shadow: var(--focus-ring);
 }
-
-/* Scrollbar */
 
 * {
   scrollbar-width: thin;
@@ -119,11 +134,9 @@ textarea:focus-visible {
   background-clip: padding-box;
 }
 
-/* Layout shell */
-
 .sidebar-shell {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at left top, rgba(51, 65, 85, 0.45), transparent 26%),
     linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
@@ -147,7 +160,7 @@ textarea:focus-visible {
 .content-area {
   display: flex;
   min-width: 0;
-  min-height: 100vh;
+  min-height: 100dvh;
   flex: 1;
   flex-direction: column;
 }
@@ -187,8 +200,6 @@ textarea:focus-visible {
     padding: 1rem;
   }
 }
-
-/* Motion */
 
 @media (prefers-reduced-motion: reduce) {
   html,

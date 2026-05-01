@@ -1,18 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowLeft,
-  CarFront,
-  Gauge,
-  ImagePlus,
-  Settings,
-  Trash2,
-  TriangleAlert,
-} from "lucide-react";
+import { CarFront, Plus, Settings, Trash2 } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
+import AppModal from "@/components/ui/app-modal";
 import Button from "@/components/ui/button";
 import FormField from "@/components/ui/form-field";
 import Input from "@/components/ui/input";
@@ -24,7 +17,10 @@ import { useSafeI18n } from "@/hooks/use-safe-i18n";
 import { useMyVehicle } from "@/hooks/vehicles/use-my-vehicle";
 import { cn } from "@/lib/utils";
 
-type FileGroup = "service" | "dashboard" | "other";
+type PreviewFile = {
+  file: File;
+  url: string;
+};
 
 export default function ReportIssueForm() {
   const router = useRouter();
@@ -42,42 +38,40 @@ export default function ReportIssueForm() {
   const [needBrakes, setNeedBrakes] = useState(false);
   const [needTires, setNeedTires] = useState(false);
   const [needOil, setNeedOil] = useState(false);
-  const [dashboardChecks, setDashboardChecks] = useState("");
-  const [otherProblems, setOtherProblems] = useState("");
+  const [problemDescription, setProblemDescription] = useState("");
+  const [files, setFiles] = useState<PreviewFile[]>([]);
+  const [selectedPreview, setSelectedPreview] = useState<PreviewFile | null>(
+    null
+  );
 
-  const [serviceFiles, setServiceFiles] = useState<File[]>([]);
-  const [dashboardFiles, setDashboardFiles] = useState<File[]>([]);
-  const [otherFiles, setOtherFiles] = useState<File[]>([]);
+  useEffect(() => {
+    return () => {
+      files.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [files]);
 
-  function getFiles(group: FileGroup) {
-    if (group === "service") return serviceFiles;
-    if (group === "dashboard") return dashboardFiles;
-    return otherFiles;
-  }
+  function handleFilesChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = Array.from(event.target.files ?? [])
+      .filter((file) => file.type.startsWith("image/"))
+      .map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+      }));
 
-  function setFilesForGroup(group: FileGroup, files: File[]) {
-    if (group === "service") setServiceFiles(files);
-    if (group === "dashboard") setDashboardFiles(files);
-    if (group === "other") setOtherFiles(files);
-  }
-
-  function handleFilesChange(
-    group: FileGroup,
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const selectedFiles = Array.from(event.target.files ?? []).filter((file) =>
-      file.type.startsWith("image/")
-    );
-
-    setFilesForGroup(group, [...getFiles(group), ...selectedFiles]);
+    setFiles((currentFiles) => [...currentFiles, ...selectedFiles]);
     event.target.value = "";
   }
 
-  function removeFile(group: FileGroup, index: number) {
-    setFilesForGroup(
-      group,
-      getFiles(group).filter((_, itemIndex) => itemIndex !== index)
-    );
+  function removeFile(index: number) {
+    setFiles((currentFiles) => {
+      const fileToRemove = currentFiles[index];
+
+      if (fileToRemove) {
+        URL.revokeObjectURL(fileToRemove.url);
+      }
+
+      return currentFiles.filter((_, itemIndex) => itemIndex !== index);
+    });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -88,9 +82,8 @@ export default function ReportIssueForm() {
       need_brakes: needBrakes,
       need_tires: needTires,
       need_oil: needOil,
-      dashboard_checks: dashboardChecks || undefined,
-      other_problems: otherProblems || undefined,
-      files: [...serviceFiles, ...dashboardFiles, ...otherFiles],
+      other_problems: problemDescription || undefined,
+      files: files.map((item) => item.file),
     });
 
     if (result) {
@@ -99,200 +92,146 @@ export default function ReportIssueForm() {
   }
 
   return (
-    <DataStateBoundary
-      isLoading={vehicleLoading}
-      loadingText={t("issues", "loadingVehicleData")}
-    >
-      <div className="space-y-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => router.push(backHref)}
-          className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-white hover:bg-white/15"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t("common", "back")}
-        </Button>
-
-        {!vehicleData?.assignment ? (
-          <SectionCard
-            title={t("issues", "reportIssue")}
-            icon={<CarFront className="h-5 w-5" />}
+    <>
+      <DataStateBoundary
+        isLoading={vehicleLoading}
+        loadingText={t("issues", "loadingVehicleData")}
+      >
+        <div className="space-y-4">
+          <Button
+            type="button"
+            variant="back"
+            onClick={() => router.push(backHref)}
           >
-            <p className="text-sm text-slate-300">
-              {t("issues", "noAssignedVehicleReport")}
-            </p>
-          </SectionCard>
-        ) : (
-          <SectionCard
-            title={t("issues", "reportIssue")}
-            icon={<CarFront className="h-5 w-5" />}
-          >
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {error ? (
-                <DataStateBoundary isError errorMessage={error}>
-                  <div />
-                </DataStateBoundary>
-              ) : null}
+            {t("common", "back")}
+          </Button>
 
-              {success ? (
-                <p className="text-sm font-semibold text-emerald-400">
-                  {success}
-                </p>
-              ) : null}
+          {!vehicleData?.assignment ? (
+            <SectionCard title={t("issues", "reportIssue")}>
+              <p className="text-sm text-slate-300">
+                {t("issues", "noAssignedVehicleReport")}
+              </p>
+            </SectionCard>
+          ) : (
+            <SectionCard title={t("issues", "reportIssue")}>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {error ? (
+                  <DataStateBoundary isError errorMessage={error}>
+                    <div />
+                  </DataStateBoundary>
+                ) : null}
 
-              <IssueCategory
-                title={t("issues", "serviceCategory")}
-                icon={<Settings className="h-4 w-4" />}
-              >
-                <FormField label={t("issues", "serviceInKm")}>
-                  <Input
-                    value={needServiceInKm}
-                    onChange={(event) => setNeedServiceInKm(event.target.value)}
-                    placeholder={t("vehicles", "optional")}
-                    inputMode="numeric"
-                  />
-                </FormField>
+                {success ? (
+                  <p className="text-sm font-semibold text-emerald-400">
+                    {success}
+                  </p>
+                ) : null}
 
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <IssueSelectButton
-                    label={t("issues", "brakes")}
-                    checked={needBrakes}
-                    onClick={() => setNeedBrakes((value) => !value)}
-                  />
-                  <IssueSelectButton
-                    label={t("issues", "tires")}
-                    checked={needTires}
-                    onClick={() => setNeedTires((value) => !value)}
-                  />
-                  <IssueSelectButton
-                    label={t("issues", "oil")}
-                    checked={needOil}
-                    onClick={() => setNeedOil((value) => !value)}
+                <div className="space-y-4 rounded-2xl border border-white/10 bg-black/10 p-4">
+                  <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white">
+                      <Settings className="h-4 w-4" />
+                    </span>
+
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-white">
+                      {t("issues", "basicServiceChecks")}
+                    </h3>
+                  </div>
+
+                  <FormField label={t("issues", "serviceInKm")}>
+                    <Input
+                      value={needServiceInKm}
+                      onChange={(event) =>
+                        setNeedServiceInKm(event.target.value)
+                      }
+                      placeholder={t("vehicles", "optional")}
+                      inputMode="numeric"
+                    />
+                  </FormField>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <IssueSelectButton
+                      label={t("issues", "brakes")}
+                      checked={needBrakes}
+                      onClick={() => setNeedBrakes((value) => !value)}
+                    />
+
+                    <IssueSelectButton
+                      label={t("issues", "tires")}
+                      checked={needTires}
+                      onClick={() => setNeedTires((value) => !value)}
+                    />
+
+                    <IssueSelectButton
+                      label={t("issues", "oil")}
+                      checked={needOil}
+                      onClick={() => setNeedOil((value) => !value)}
+                    />
+                  </div>
+
+                  <FormField label={t("issues", "otherProblems")}>
+                    <Textarea
+                      value={problemDescription}
+                      onChange={(event) =>
+                        setProblemDescription(event.target.value)
+                      }
+                      placeholder={t("issues", "otherProblemsPlaceholder")}
+                    />
+                  </FormField>
+
+                  <PhotoUpload
+                    files={files}
+                    onChange={handleFilesChange}
+                    onRemove={removeFile}
+                    onPreview={setSelectedPreview}
                   />
                 </div>
 
-                <PhotoUpload
-                  files={serviceFiles}
-                  label={t("issues", "addServicePhotos")}
-                  addLabel={t("issues", "addPhotos")}
-                  description={t("issues", "addPhotosDescription")}
-                  onChange={(event) => handleFilesChange("service", event)}
-                  onRemove={(index) => removeFile("service", index)}
-                />
-              </IssueCategory>
+                <div className="flex justify-end border-t border-white/10 pt-4">
+                  <Button type="submit" disabled={loading} loading={loading}>
+                    {t("issues", "sendIssue")}
+                  </Button>
+                </div>
+              </form>
+            </SectionCard>
+          )}
+        </div>
+      </DataStateBoundary>
 
-              <IssueCategory
-                title={t("issues", "dashboardCategory")}
-                icon={<Gauge className="h-4 w-4" />}
-              >
-                <FormField label={t("issues", "dashboardChecks")}>
-                  <Textarea
-                    value={dashboardChecks}
-                    onChange={(event) => setDashboardChecks(event.target.value)}
-                    placeholder={t("issues", "dashboardChecksPlaceholder")}
-                  />
-                </FormField>
-
-                <PhotoUpload
-                  files={dashboardFiles}
-                  label={t("issues", "addDashboardPhotos")}
-                  addLabel={t("issues", "addPhotos")}
-                  description={t("issues", "addPhotosDescription")}
-                  onChange={(event) => handleFilesChange("dashboard", event)}
-                  onRemove={(index) => removeFile("dashboard", index)}
-                />
-              </IssueCategory>
-
-              <IssueCategory
-                title={t("issues", "otherProblemsCategory")}
-                icon={<TriangleAlert className="h-4 w-4" />}
-              >
-                <FormField label={t("issues", "otherProblems")}>
-                  <Textarea
-                    value={otherProblems}
-                    onChange={(event) => setOtherProblems(event.target.value)}
-                    placeholder={t("issues", "otherProblemsPlaceholder")}
-                  />
-                </FormField>
-
-                <PhotoUpload
-                  files={otherFiles}
-                  label={t("issues", "addOtherPhotos")}
-                  addLabel={t("issues", "addPhotos")}
-                  description={t("issues", "addPhotosDescription")}
-                  onChange={(event) => handleFilesChange("other", event)}
-                  onRemove={(index) => removeFile("other", index)}
-                />
-              </IssueCategory>
-
-              <Button
-                type="submit"
-                disabled={loading}
-                loading={loading}
-                className="rounded-xl"
-              >
-                {t("issues", "sendIssue")}
-              </Button>
-            </form>
-          </SectionCard>
-        )}
-      </div>
-    </DataStateBoundary>
-  );
-}
-
-function IssueCategory({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-4 rounded-2xl border border-white/10 bg-black/10 p-4">
-      <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white">
-          {icon}
-        </span>
-        <h3 className="text-sm font-bold uppercase tracking-wide text-white">
-          {title}
-        </h3>
-      </div>
-
-      {children}
-    </section>
+      <AppModal
+        open={Boolean(selectedPreview)}
+        onClose={() => setSelectedPreview(null)}
+        title={selectedPreview?.file.name || t("issues", "issuePhoto")}
+      >
+        {selectedPreview ? (
+          <img
+            src={selectedPreview.url}
+            alt={selectedPreview.file.name}
+            className="max-h-[70vh] w-full rounded-2xl object-contain"
+          />
+        ) : null}
+      </AppModal>
+    </>
   );
 }
 
 function PhotoUpload({
   files,
-  label,
-  addLabel,
-  description,
   onChange,
   onRemove,
+  onPreview,
 }: {
-  files: File[];
-  label: string;
-  addLabel: string;
-  description: string;
+  files: PreviewFile[];
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: (index: number) => void;
+  onPreview: (file: PreviewFile) => void;
 }) {
   return (
-    <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-white">{label}</p>
-          <p className="text-xs text-slate-400">{description}</p>
-        </div>
+        <p className="text-sm font-semibold text-white">Adaugă foto</p>
 
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/15">
-          <ImagePlus className="h-4 w-4" />
-          {addLabel}
+        <label className="cursor-pointer">
           <input
             type="file"
             accept="image/*"
@@ -300,36 +239,44 @@ function PhotoUpload({
             onChange={onChange}
             className="hidden"
           />
+
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:bg-blue-500">
+            <Plus className="h-5 w-5" />
+          </span>
         </label>
       </div>
 
       {files.length > 0 ? (
-        <div className="space-y-1 pt-1">
-          {files.map((file, index) => (
+        <div className="space-y-2">
+          {files.map((item, index) => (
             <div
-              key={`${file.name}-${index}`}
-              className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5"
+              key={`${item.file.name}-${index}`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
             >
-              <div className="min-w-0">
+              <button
+                type="button"
+                onClick={() => onPreview(item)}
+                className="min-w-0 flex-1 text-left"
+              >
                 <p className="truncate text-sm font-semibold text-white">
-                  {file.name}
+                  {item.file.name}
                 </p>
-                <p className="text-xs text-slate-400">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-              </div>
+              </button>
 
               <button
                 type="button"
                 onClick={() => onRemove(index)}
-                className="rounded-full bg-red-500/10 p-2 text-red-200 hover:bg-red-500/20"
+                className="rounded-full bg-red-500/10 p-2 text-red-300 transition hover:bg-red-500/20"
+                aria-label="Șterge poza"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
           ))}
         </div>
-      ) : null}
+      ) : (
+        <p className="text-xs text-slate-400">Nu ai adăugat nicio poză.</p>
+      )}
     </div>
   );
 }

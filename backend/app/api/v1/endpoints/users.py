@@ -328,10 +328,7 @@ async def reject_user(
             detail="Only pending registration requests can be rejected.",
         )
 
-    registration_request.status = RegistrationRequestStatus.REJECTED.value
-    registration_request.rejected_at = datetime.now(timezone.utc)
-    registration_request.rejected_by_user_id = admin_user.id
-
+    await db.delete(registration_request)
     await db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

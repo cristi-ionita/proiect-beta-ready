@@ -9,7 +9,7 @@ type InputProps = InputHTMLAttributes<HTMLInputElement> & {
 };
 
 const baseStyles =
-  "w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm text-white outline-none backdrop-blur-md transition";
+  "block w-full max-w-full min-w-0 rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm text-white outline-none backdrop-blur-md transition";
 
 export default function Input({ className, ...props }: InputProps) {
   return (

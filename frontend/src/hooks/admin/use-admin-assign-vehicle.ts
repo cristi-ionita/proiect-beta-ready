@@ -2,32 +2,23 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { getVehicleLiveStatus } from "@/services/vehicles.api";
-import { createAssignment, closeAssignment } from "@/services/assignments.api";
+import { closeAssignment, createAssignment } from "@/services/assignments.api";
 import { listUsers } from "@/services/users.api";
+import { getVehicleLiveStatus } from "@/services/vehicles.api";
 import type { UserItem } from "@/types/user.types";
-
-export type VehicleLiveStatusItem = {
-  vehicle_id: number;
-  brand: string;
-  model: string;
-  license_plate: string;
-  year: number;
-  availability: string;
-  vehicle_status: string;
-  assigned_to_user_id?: number | null;
-  assigned_to_name?: string | null;
-  active_assignment_id?: number | null;
-};
+import type { VehicleLiveStatusItem } from "@/types/vehicle.types";
 
 function extractErrorMessage(error: unknown): string {
   const err = error as {
+    message?: string;
     response?: {
       data?: {
         detail?: string | Array<{ msg?: string }> | { msg?: string };
       };
     };
   };
+
+  if (err?.message) return err.message;
 
   const detail = err?.response?.data?.detail;
 
@@ -90,23 +81,29 @@ export function useAdminAssignVehicle(): UseAdminAssignVehicleResult {
         listUsers(),
       ]);
 
-      const safeLiveVehicles =
+      const safeLiveVehicles: VehicleLiveStatusItem[] =
         liveResult.status === "fulfilled" && Array.isArray(liveResult.value)
           ? liveResult.value
           : [];
 
-      const safeUsers =
+      const safeUsers: UserItem[] =
         usersResult.status === "fulfilled" && Array.isArray(usersResult.value)
           ? usersResult.value
           : [];
 
       setVehicles(safeLiveVehicles);
       setUsers(
-        safeUsers.filter((user) => user.is_active && user.role === "employee")
+        safeUsers.filter(
+          (user) =>
+            user.is_active &&
+            user.role === "employee" &&
+            user.status === "approved"
+        )
       );
 
       const initialSelections: Record<number, string> = {};
-      safeLiveVehicles.forEach((vehicle: VehicleLiveStatusItem) => {
+
+      safeLiveVehicles.forEach((vehicle) => {
         if (vehicle.availability === "occupied" && vehicle.assigned_to_user_id) {
           initialSelections[vehicle.vehicle_id] = String(
             vehicle.assigned_to_user_id
@@ -151,9 +148,7 @@ export function useAdminAssignVehicle(): UseAdminAssignVehicleResult {
       [vehicle.vehicle_id]: nextValue,
     }));
 
-    if (nextValue === currentAssignedUserId) {
-      return;
-    }
+    if (nextValue === currentAssignedUserId) return;
 
     setVehicleToChange(vehicle);
     setNextAllocationValue(nextValue);
@@ -193,7 +188,18 @@ export function useAdminAssignVehicle(): UseAdminAssignVehicleResult {
         }
       } else {
         const nextUserId = Number(nextAllocationValue);
+
         if (!nextUserId) return;
+
+        const nextUser = users.find((user) => user.id === nextUserId);
+        const nextUserShiftNumber = Number(nextUser?.shift_number);
+
+        if (
+          !Number.isInteger(nextUserShiftNumber) ||
+          nextUserShiftNumber <= 0
+        ) {
+          throw new Error("Utilizatorul selectat nu are tură validă.");
+        }
 
         if (vehicleToChange.active_assignment_id) {
           await closeAssignment(vehicleToChange.active_assignment_id);
@@ -202,6 +208,7 @@ export function useAdminAssignVehicle(): UseAdminAssignVehicleResult {
         await createAssignment({
           user_id: nextUserId,
           vehicle_id: vehicleToChange.vehicle_id,
+          shift_number: nextUserShiftNumber,
         });
       }
 

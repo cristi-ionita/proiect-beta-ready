@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import IssueDetailsCard from "@/components/admin/issues/issue-details-card";
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
@@ -28,7 +27,6 @@ export default function AdminIssueDetailsScreen() {
     return (
       <div className="space-y-6">
         <Button variant="back" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
           {t("common", "back")}
         </Button>
 
@@ -40,7 +38,6 @@ export default function AdminIssueDetailsScreen() {
   return (
     <div className="space-y-6">
       <Button variant="back" onClick={() => router.back()}>
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

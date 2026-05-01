@@ -3,7 +3,7 @@
 import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, KeyRound, Save } from "lucide-react";
+import { KeyRound, Save } from "lucide-react";
 
 import AuthPageShell from "@/components/auth/auth-page-shell";
 import PasswordField from "@/components/auth/PasswordField";
@@ -95,7 +95,6 @@ function ResetPasswordContent() {
         <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/">
             <Button type="button" variant="secondary">
-              <ArrowLeft className="h-4 w-4" />
               Back to login
             </Button>
           </Link>

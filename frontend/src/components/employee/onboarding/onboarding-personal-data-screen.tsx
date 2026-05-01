@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 
 import Alert from "@/components/ui/alert";
 import Button from "@/components/ui/button";
@@ -83,7 +83,6 @@ export default function OnboardingPersonalDataScreen() {
   return (
     <div className="space-y-6">
       <Button variant="back" onClick={() => router.push("/employee/onboarding")}>
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

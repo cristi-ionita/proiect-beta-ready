@@ -2,18 +2,15 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, FileText, Upload } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
-import ListChip from "@/components/patterns/list-chip";
-import ListRow from "@/components/patterns/list-row";
 import AppModal from "@/components/ui/app-modal";
 import Button from "@/components/ui/button";
 import SectionCard from "@/components/ui/section-card";
 import { ROUTES } from "@/constants/routes";
 import { useMyDocuments } from "@/hooks/documents/use-my-documents";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
-import { formatDate } from "@/lib/utils";
 import {
   deleteMyDocument,
   myDownloadDocumentFile,
@@ -25,6 +22,12 @@ type UniqueDocumentSlot = {
   labelKey: "driverLicense" | "identityDocument" | "taxNumber" | "bankCard";
   types: string[];
   uploadType: string;
+};
+
+type PreviewState = {
+  url: string;
+  type: string;
+  fileName: string;
 };
 
 const UNIQUE_DOCUMENT_SLOTS: UniqueDocumentSlot[] = [
@@ -56,13 +59,12 @@ const UNIQUE_DOCUMENT_SLOTS: UniqueDocumentSlot[] = [
 
 export default function MyDocumentsListScreen() {
   const router = useRouter();
-  const { t, localeTag } = useSafeI18n();
+  const { t } = useSafeI18n();
   const fileInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
 
   const { data, loading, error, refetch } = useMyDocuments();
 
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewName, setPreviewName] = useState("");
+  const [preview, setPreview] = useState<PreviewState | null>(null);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   const documents = Array.isArray(data) ? data : [];
@@ -70,7 +72,7 @@ export default function MyDocumentsListScreen() {
     (document) => document.category === "personal"
   );
 
-  const medicalDocuments = personalDocuments.filter(
+  const otherDocuments = personalDocuments.filter(
     (document) => document.type === "medical_certificate"
   );
 
@@ -84,21 +86,22 @@ export default function MyDocumentsListScreen() {
     const blob = await myDownloadDocumentFile(documentId);
     const url = URL.createObjectURL(blob);
 
-    setPreviewUrl((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return url;
-    });
+    setPreview((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url);
 
-    setPreviewName(fileName || "document");
+      return {
+        url,
+        type: blob.type,
+        fileName: fileName || "document",
+      };
+    });
   }
 
   function closePreview() {
-    setPreviewUrl((current) => {
-      if (current) URL.revokeObjectURL(current);
+    setPreview((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url);
       return null;
     });
-
-    setPreviewName("");
   }
 
   async function handleUniqueUpload(
@@ -130,7 +133,7 @@ export default function MyDocumentsListScreen() {
     }
   }
 
-  async function handleMedicalUpload(file: File | null) {
+  async function handleOtherUpload(file: File | null) {
     if (!file) return;
 
     try {
@@ -156,7 +159,6 @@ export default function MyDocumentsListScreen() {
         variant="back"
         onClick={() => router.push(ROUTES.EMPLOYEE.DOCUMENTS)}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 
@@ -172,74 +174,81 @@ export default function MyDocumentsListScreen() {
               const isUploading = uploadingKey === slot.key;
 
               return (
-                <ListRow
+                <div
                   key={slot.key}
-                  leading={<FileText className="h-4 w-4" />}
-                  title={t("documents", slot.labelKey)}
-                  subtitle={
-                    document
-                      ? document.file_name || "document"
-                      : t("documents", "missingDocument")
-                  }
-                  meta={
-                    document ? (
-                      <ListChip icon={<CalendarDays className="h-3 w-3" />}>
-                        {formatDate(document.created_at, localeTag)}
-                      </ListChip>
-                    ) : undefined
-                  }
-                  actions={
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {document ? (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() =>
-                            void handlePreview(document.id, document.file_name)
-                          }
-                        >
-                          {t("documents", "viewDocument")}
-                        </Button>
-                      ) : null}
-
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        ref={(element) => {
-                          fileInputsRef.current[slot.key] = element;
-                        }}
-                        disabled={isUploading}
-                        onChange={(event) =>
-                          void handleUniqueUpload(
-                            slot,
-                            event.target.files?.[0] || null
-                          )
-                        }
-                        className="hidden"
-                      />
-
-                      <Button
-                        size="sm"
-                        disabled={isUploading}
-                        loading={isUploading}
-                        onClick={() =>
-                          fileInputsRef.current[slot.key]?.click()
-                        }
-                      >
-                        <Upload className="h-4 w-4" />
-                        {document
-                          ? t("documents", "replaceDocument")
-                          : t("documents", "addDocument")}
-                      </Button>
+                  className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/10 p-4"
+                >
+                  <div
+                    role={document ? "button" : undefined}
+                    tabIndex={document ? 0 : undefined}
+                    onClick={
+                      document
+                        ? () => void handlePreview(document.id, document.file_name)
+                        : undefined
+                    }
+                    onKeyDown={(event) => {
+                      if (!document) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        void handlePreview(document.id, document.file_name);
+                      }
+                    }}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/60 text-white">
+                      <FileText className="h-4 w-4" />
                     </div>
-                  }
-                />
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-white">
+                        {t("documents", slot.labelKey)}
+                      </p>
+
+                      <p className="mt-0.5 truncate text-xs text-slate-400">
+                        {document
+                          ? document.file_name || "document"
+                          : t("documents", "missingDocument")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    ref={(element) => {
+                      fileInputsRef.current[slot.key] = element;
+                    }}
+                    disabled={isUploading}
+                    onChange={(event) =>
+                      void handleUniqueUpload(
+                        slot,
+                        event.target.files?.[0] || null
+                      )
+                    }
+                    className="hidden"
+                  />
+
+                  <Button
+                    size="sm"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center p-0"
+                    disabled={isUploading}
+                    loading={isUploading}
+                    onClick={() => fileInputsRef.current[slot.key]?.click()}
+                    aria-label={
+                      document
+                        ? t("documents", "replaceDocument")
+                        : t("documents", "addDocument")
+                    }
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               );
             })}
           </div>
         </SectionCard>
 
-        <SectionCard title={t("documents", "medicalLeaves")}>
+        <SectionCard title="Alte documente">
           <div className="space-y-3">
             <div className="flex justify-end">
               <input
@@ -250,53 +259,52 @@ export default function MyDocumentsListScreen() {
                 }}
                 disabled={uploadingKey === "medical_certificate"}
                 onChange={(event) =>
-                  void handleMedicalUpload(event.target.files?.[0] || null)
+                  void handleOtherUpload(event.target.files?.[0] || null)
                 }
                 className="hidden"
               />
 
               <Button
                 size="sm"
+                className="flex h-9 w-9 items-center justify-center p-0"
                 disabled={uploadingKey === "medical_certificate"}
                 loading={uploadingKey === "medical_certificate"}
-                onClick={() =>
-                  fileInputsRef.current.medical_certificate?.click()
-                }
+                onClick={() => fileInputsRef.current.medical_certificate?.click()}
+                aria-label="Adaugă document"
               >
-                <Upload className="h-4 w-4" />
-                {t("documents", "addMedicalLeave")}
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
 
-            {medicalDocuments.length === 0 ? (
+            {otherDocuments.length === 0 ? (
               <p className="text-sm text-slate-400">
-                {t("documents", "noMedicalLeaves")}
+                Nu există alte documente încărcate.
               </p>
             ) : (
               <div className="space-y-2.5">
-                {medicalDocuments.map((document) => (
-                  <ListRow
+                {otherDocuments.map((document) => (
+                  <button
                     key={document.id}
-                    leading={<FileText className="h-4 w-4" />}
-                    title={document.file_name || "document"}
-                    subtitle={t("documents", "medicalLeave")}
-                    meta={
-                      <ListChip icon={<CalendarDays className="h-3 w-3" />}>
-                        {formatDate(document.created_at, localeTag)}
-                      </ListChip>
+                    type="button"
+                    onClick={() =>
+                      void handlePreview(document.id, document.file_name)
                     }
-                    actions={
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          void handlePreview(document.id, document.file_name)
-                        }
-                      >
-                        {t("documents", "viewDocument")}
-                      </Button>
-                    }
-                  />
+                    className="flex w-full items-center gap-3 rounded-3xl border border-white/10 bg-white/10 p-4 text-left transition hover:bg-white/15"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/60 text-white">
+                      <FileText className="h-4 w-4" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-white">
+                        {document.file_name || "document"}
+                      </p>
+
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        Alt document
+                      </p>
+                    </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -305,16 +313,24 @@ export default function MyDocumentsListScreen() {
       </DataStateBoundary>
 
       <AppModal
-        open={Boolean(previewUrl)}
+        open={Boolean(preview)}
         onClose={closePreview}
-        title={previewName}
+        title={preview?.fileName}
       >
-        {previewUrl ? (
-          <iframe
-            src={previewUrl}
-            title={previewName}
-            className="h-[70vh] w-full rounded-xl bg-white"
-          />
+        {preview ? (
+          preview.type.includes("image") ? (
+            <img
+              src={preview.url}
+              alt={preview.fileName}
+              className="max-h-[70vh] w-full rounded-xl object-contain"
+            />
+          ) : (
+            <iframe
+              src={preview.url}
+              title={preview.fileName}
+              className="h-[70vh] w-full rounded-xl bg-white"
+            />
+          )
         ) : null}
       </AppModal>
     </div>

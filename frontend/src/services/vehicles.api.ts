@@ -137,3 +137,13 @@ export async function getAdminVehiclePhotoFile(photoId: number): Promise<Blob> {
 
   return data;
 }
+
+export async function updateMyVehicleMileage(
+  currentMileage: number
+): Promise<{ current_mileage: number }> {
+  const { data } = await api.patch("/my-vehicle/mileage", {
+    current_mileage: currentMileage,
+  });
+
+  return data;
+}

@@ -29,6 +29,7 @@ export interface AssignmentListResponse {
 export interface CreateAssignmentPayload {
   user_id: number;
   vehicle_id: number;
+  shift_number: number;
 }
 
 export interface CloseAssignmentResponse {

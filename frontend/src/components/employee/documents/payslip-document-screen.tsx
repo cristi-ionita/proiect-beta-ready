@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   CalendarDays,
   Download,
   FileText,
@@ -86,7 +85,6 @@ export default function PayslipDocumentScreen() {
         variant="back"
         onClick={() => router.push(ROUTES.EMPLOYEE.DOCUMENTS)}
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

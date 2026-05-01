@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CarFront, ClipboardList, UserRound } from "lucide-react";
+import { CarFront, ClipboardList, UserRound } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import ListChip from "@/components/patterns/list-chip";
@@ -11,10 +11,8 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import SectionCard from "@/components/ui/section-card";
 import Select from "@/components/ui/select";
 import StatusBadge from "@/components/ui/status-badge";
-import {
-  useAdminAssignVehicle,
-  type VehicleLiveStatusItem,
-} from "@/hooks/admin/use-admin-assign-vehicle";
+import { useAdminAssignVehicle } from "@/hooks/admin/use-admin-assign-vehicle";
+import type { VehicleLiveStatusItem } from "@/types/vehicle.types";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
 
 export default function AdminAssignVehicleScreen() {
@@ -93,7 +91,6 @@ export default function AdminAssignVehicleScreen() {
     <>
       <div className="space-y-6">
         <Button variant="back" onClick={() => router.push("/admin/dashboard")}>
-          <ArrowLeft className="h-4 w-4" />
           {t("common", "back")}
         </Button>
 

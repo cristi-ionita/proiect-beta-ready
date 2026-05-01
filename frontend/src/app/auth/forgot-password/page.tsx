@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, MailQuestion, Send } from "lucide-react";
+import { MailQuestion, Send } from "lucide-react";
 
 import AuthPageShell from "@/components/auth/auth-page-shell";
 import Alert from "@/components/ui/alert";
@@ -93,7 +93,6 @@ export default function ForgotPasswordPage() {
         <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/">
             <Button type="button" variant="secondary">
-              <ArrowLeft className="h-4 w-4" />
               {text.backToLogin}
             </Button>
           </Link>

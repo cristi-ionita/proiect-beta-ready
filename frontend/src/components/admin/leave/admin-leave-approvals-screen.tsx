@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CalendarDays, CheckCircle2, User, XCircle } from "lucide-react";
+import { CalendarDays, CheckCircle2, User, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
@@ -52,7 +52,6 @@ export default function AdminLeaveApprovalsScreen() {
   return (
     <div className="space-y-6">
       <Button variant="back" onClick={() => router.push("/admin/leave")}>
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

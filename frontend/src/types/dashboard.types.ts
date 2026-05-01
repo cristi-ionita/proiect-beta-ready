@@ -16,6 +16,15 @@ export interface AdminDashboardActiveAssignment {
   user_full_name: string;
 }
 
+export interface AdminDashboardIssuesSummary {
+  total: number;
+  open: number;
+  scheduled: number;
+  in_progress: number;
+  resolved: number;
+  canceled: number;
+}
+
 export interface AdminDashboardSummaryResponse {
   users: {
     total: number;
@@ -39,14 +48,7 @@ export interface AdminDashboardSummaryResponse {
     active: number;
     closed: number;
   };
-  issues: {
-    total: number;
-    open: number;
-    scheduled: number;
-    in_progress: number;
-    resolved: number;
-    canceled: number;
-  };
+  issues: AdminDashboardIssuesSummary;
   documents: {
     total: number;
     personal: number;
@@ -64,6 +66,7 @@ export interface AdminDashboardData {
   todayLeaves: number;
   availableVehicles: number;
   pendingUsers: number;
+  issuesSummary: AdminDashboardIssuesSummary;
   issues: AdminDashboardRecentIssue[];
   activeAssignments: AdminDashboardActiveAssignment[];
 }

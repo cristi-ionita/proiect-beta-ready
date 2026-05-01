@@ -68,22 +68,17 @@ export interface IssueItem {
   vehicle_license_plate?: string;
   vehicle_brand?: string;
   vehicle_model?: string;
+
   reported_by_name?: string;
   reported_by_shift_number?: number | null;
+
+  assigned_mechanic_name?: string | null;
 
   photos?: IssuePhoto[];
 }
 
 export interface IssuesResponse {
   issues: IssueItem[];
-}
-
-export interface UpdateIssuePayload {
-  status?: VehicleIssueStatus;
-  assigned_mechanic_id?: number | null;
-  scheduled_for?: string | null;
-  scheduled_location?: string | null;
-  priority?: VehicleIssuePriority;
 }
 
 export interface CreateIssuePayload {
@@ -98,4 +93,34 @@ export interface CreateIssuePayload {
   other_problems?: string | null;
 
   files?: File[];
+}
+
+export interface UpdateIssuePayload {
+  status?: VehicleIssueStatus;
+  assigned_mechanic_id?: number | null;
+
+  scheduled_for?: string | null;
+  scheduled_location?: string | null;
+
+  priority?: VehicleIssuePriority;
+
+  started_at?: string | null;
+  resolved_at?: string | null;
+
+  resolution_notes?: string | null;
+  estimated_cost?: number | null;
+  final_cost?: number | null;
+}
+
+export interface MechanicUpdateIssuePayload {
+  status?: Extract<
+    VehicleIssueStatus,
+    "scheduled" | "in_progress" | "resolved" | "canceled"
+  >;
+
+  scheduled_for?: string | null;
+  scheduled_location?: string | null;
+
+  resolution_notes?: string | null;
+  final_cost?: number | null;
 }

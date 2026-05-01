@@ -173,8 +173,8 @@ export default function AdminSidebar({
         )}
         aria-label="Admin sidebar"
       >
-        <div className="flex h-full flex-col px-2 py-5">
-          <div className="relative mb-4">
+        <div className="flex h-dvh flex-col overflow-hidden px-2 py-5">
+          <div className="relative mb-4 shrink-0">
             <button
               type="button"
               onClick={() => setLanguageOpen((current) => !current)}
@@ -223,7 +223,7 @@ export default function AdminSidebar({
             ) : null}
           </div>
 
-          <nav className="flex flex-1 flex-col items-center gap-2">
+          <nav className="flex flex-1 flex-col items-center gap-2 overflow-y-auto overscroll-contain pb-4">
             {navigation.map((item) => {
               const isActive = isItemActive(item.href);
 
@@ -273,7 +273,7 @@ export default function AdminSidebar({
             })}
           </nav>
 
-          <div className="mt-4">
+          <div className="shrink-0 pt-4">
             <button
               type="button"
               onClick={() => {

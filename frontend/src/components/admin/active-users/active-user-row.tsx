@@ -4,7 +4,6 @@ import { CarFront, UserRound } from "lucide-react";
 
 import ListChip from "@/components/patterns/list-chip";
 import ListRow from "@/components/patterns/list-row";
-import StatusBadge from "@/components/ui/status-badge";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
 
 export type ActiveUserRowData = {
@@ -21,33 +20,42 @@ type ActiveUserRowProps = {
 
 export default function ActiveUserRow({ user, index }: ActiveUserRowProps) {
   const { t } = useSafeI18n();
-  const fallback = "—";
 
   return (
     <ListRow
-      leading={<span className="text-xs font-semibold">{index + 1}</span>}
-      title={user.full_name || fallback}
-      badge={
-        <StatusBadge
-          label={t("common", "active")}
-          variant="success"
-          size="sm"
-        />
+      leading={
+        <span className="text-xs font-semibold text-slate-400">
+          {index + 1}
+        </span>
       }
-      meta={
-        <>
-          <ListChip icon={<UserRound className="h-3 w-3" />}>
-            {user.shift_number || fallback}
-          </ListChip>
+      title={
+        <div className="flex flex-col gap-1">
+          {/* LINIA 1: NUME + MASINA */}
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-semibold text-white truncate">
+              {user.full_name}
+            </span>
 
-          <ListChip
-            icon={<CarFront className="h-3 w-3" />}
-            variant={user.vehicle_license_plate ? "blue" : "default"}
-          >
-            {user.vehicle_license_plate || fallback}
-          </ListChip>
-        </>
+            {user.vehicle_license_plate ? (
+              <ListChip
+                icon={<CarFront className="h-3 w-3" />}
+                variant="blue"
+              >
+                {user.vehicle_license_plate}
+              </ListChip>
+            ) : null}
+          </div>
+
+          {/* LINIA 2: TURA */}
+          <div>
+            <ListChip icon={<UserRound className="h-3 w-3" />}>
+              {user.shift_number ? `Tura ${user.shift_number}` : "—"}
+            </ListChip>
+          </div>
+        </div>
       }
+      meta={null}
+      actions={null} // 🔥 IMPORTANT — evită orice spațiu gol în dreapta
     />
   );
 }

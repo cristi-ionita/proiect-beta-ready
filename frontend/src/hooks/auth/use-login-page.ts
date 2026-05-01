@@ -33,6 +33,9 @@ type LoginText = {
   password: string;
   createEmployeeAccount: string;
   createMechanicAccount: string;
+  admin: string;
+  employee: string;
+  mechanic: string;
   adminRoleMismatch: string;
   mechanicRoleMismatch: string;
   employeeRoleMismatch: string;
@@ -111,7 +114,10 @@ export function useLoginPage(): UseLoginPageResult {
         "common",
         "createMechanicAccount"
       ),
-            adminRoleMismatch:
+      admin: getTranslation(safeLocale, "login", "admin"),
+      employee: getTranslation(safeLocale, "login", "employee"),
+      mechanic: getTranslation(safeLocale, "login", "mechanic"),
+      adminRoleMismatch:
         safeLocale === "ro"
           ? "Acest cont nu este de administrator."
           : safeLocale === "de"
@@ -169,7 +175,7 @@ export function useLoginPage(): UseLoginPageResult {
     }
 
     if (session?.role === "employee") {
-      router.replace("/employee/onboarding");
+      router.replace("/employee/dashboard");
       return;
     }
 
@@ -280,11 +286,9 @@ export function useLoginPage(): UseLoginPageResult {
         return;
       }
 
-      router.replace("/employee/onboarding");
+      router.replace("/employee/dashboard");
     } catch (err: unknown) {
-      setError(
-        isApiClientError(err) ? err.message || text.invalid : text.error
-      );
+      setError(isApiClientError(err) ? err.message || text.invalid : text.error);
     } finally {
       setLoading(false);
     }

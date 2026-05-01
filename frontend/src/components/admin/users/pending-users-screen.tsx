@@ -1,15 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowLeft,
-  Check,
-  MailCheck,
-  MailX,
-  UserRound,
-  Users,
-  X,
-} from "lucide-react";
+import { Check, MailCheck, MailX, UserRound, Users, X } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import ListChip from "@/components/patterns/list-chip";
@@ -40,7 +32,6 @@ export default function PendingUsersScreen() {
     <div className="space-y-6">
       {showBackButton ? (
         <Button variant="back" onClick={() => router.push("/admin/dashboard")}>
-          <ArrowLeft className="h-4 w-4" />
           {t("common", "back")}
         </Button>
       ) : null}
@@ -48,7 +39,7 @@ export default function PendingUsersScreen() {
       <SectionCard
         title={t("pendingUsers", "title")}
         actions={
-          <ListChip icon={<Users className="h-3.5 w-3.5" />} variant="blue">
+          <ListChip icon={<Users className="h-3.5 w-3.5 shrink-0" />} variant="blue">
             {requests.length}
           </ListChip>
         }
@@ -71,8 +62,15 @@ export default function PendingUsersScreen() {
               return (
                 <ListRow
                   key={request.id}
-                  leading={<UserRound className="h-4 w-4" />}
+                  leading={<UserRound className="h-4 w-4 shrink-0" />}
                   title={request.full_name}
+                  subtitle={
+                    <span className="block min-w-0 break-words">
+                      {request.email || t("pendingUsers", "noEmail")}
+                      <span className="mx-1 text-slate-600">•</span>
+                      {request.role}
+                    </span>
+                  }
                   badge={
                     <StatusBadge
                       label={
@@ -84,14 +82,13 @@ export default function PendingUsersScreen() {
                       size="sm"
                     />
                   }
-                  subtitle={`${request.email || t("pendingUsers", "noEmail")} • ${
-                    request.role
-                  }`}
                   meta={
                     <>
                       {request.username ? (
-                        <ListChip icon={<UserRound className="h-3 w-3" />}>
-                          {t("pendingUsers", "username")}: {request.username}
+                        <ListChip icon={<UserRound className="h-3 w-3 shrink-0" />}>
+                          <span className="break-words">
+                            {t("pendingUsers", "username")}: {request.username}
+                          </span>
                         </ListChip>
                       ) : null}
 
@@ -104,9 +101,9 @@ export default function PendingUsersScreen() {
                       <ListChip
                         icon={
                           isEmailVerified ? (
-                            <MailCheck className="h-3 w-3" />
+                            <MailCheck className="h-3 w-3 shrink-0" />
                           ) : (
-                            <MailX className="h-3 w-3" />
+                            <MailX className="h-3 w-3 shrink-0" />
                           )
                         }
                         variant={isEmailVerified ? "emerald" : "amber"}
@@ -118,30 +115,34 @@ export default function PendingUsersScreen() {
                     </>
                   }
                   actions={
-                    <div className="flex gap-2">
+                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
                       <Button
                         type="button"
                         size="sm"
+                        className="w-full sm:w-auto"
                         onClick={() => void approveAction(request.id)}
                         disabled={isWorking || !isEmailVerified}
                         aria-label={`${t("pendingUsers", "approve")} ${
                           request.full_name
                         }`}
                       >
-                        <Check className="h-4 w-4" />
+                        <Check className="h-4 w-4 shrink-0" />
+                        <span>{t("pendingUsers", "approve")}</span>
                       </Button>
 
                       <Button
                         type="button"
                         size="sm"
                         variant="danger"
+                        className="w-full sm:w-auto"
                         onClick={() => void rejectAction(request.id)}
                         disabled={isWorking}
                         aria-label={`${t("pendingUsers", "reject")} ${
                           request.full_name
                         }`}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4 shrink-0" />
+                        <span>{t("pendingUsers", "reject")}</span>
                       </Button>
                     </div>
                   }

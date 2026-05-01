@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CalendarDays, User } from "lucide-react";
+import { CalendarDays, User } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import ListChip from "@/components/patterns/list-chip";
@@ -80,7 +80,6 @@ export default function AdminTodayLeaveScreen() {
           router.push(fromDashboard ? "/admin/dashboard" : "/admin/leave")
         }
       >
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

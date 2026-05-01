@@ -2,11 +2,10 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText, User } from "lucide-react";
+import { User } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import ListChip from "@/components/patterns/list-chip";
-import ListRow from "@/components/patterns/list-row";
 import Button from "@/components/ui/button";
 import SectionCard from "@/components/ui/section-card";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
@@ -35,7 +34,6 @@ export default function AdminCompanyDocumentsScreen() {
   return (
     <div className="space-y-6">
       <Button variant="back" onClick={() => router.push("/admin/documents")}>
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 
@@ -49,29 +47,36 @@ export default function AdminCompanyDocumentsScreen() {
         >
           <div className="space-y-3">
             {visibleUsers.map((user) => (
-              <ListRow
+              <div
                 key={user.id}
-                leading={<User className="h-4 w-4" />}
-                title={user.full_name || `User #${user.id}`}
-                meta={
-                  <ListChip icon={<User className="h-3 w-3" />}>
-                    {t("common", "shift")}: {user.shift_number || fallback}
-                  </ListChip>
-                }
-                actions={
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      router.push(
-                        `/admin/documents/company-documents/${user.id}`
-                      )
-                    }
-                  >
-                    <FileText className="h-4 w-4" />
-                    {t("documents", "uploadDocuments")}
-                  </Button>
-                }
-              />
+                className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/10 p-4"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/60 text-white">
+                  <User className="h-4 w-4" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-white">
+                    {user.full_name || `User #${user.id}`}
+                  </p>
+
+                  <div className="mt-1">
+                    <ListChip icon={<User className="h-3 w-3" />}>
+                      {t("common", "shift")}: {user.shift_number || fallback}
+                    </ListChip>
+                  </div>
+                </div>
+
+                <Button
+                  size="sm"
+                  className="shrink-0 px-4"
+                  onClick={() =>
+                    router.push(`/admin/documents/company-documents/${user.id}`)
+                  }
+                >
+                  Documente
+                </Button>
+              </div>
             ))}
           </div>
         </DataStateBoundary>

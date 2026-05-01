@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import VehicleDetailsCard from "@/components/admin/vehicles/vehicle-details-card";
 import VehiclePhotosCard from "@/components/admin/vehicles/vehicle-photos-card";
@@ -148,7 +147,6 @@ export default function AdminVehicleDetailsScreen() {
           variant="back"
           onClick={() => router.push("/admin/vehicles/list")}
         >
-          <ArrowLeft className="h-4 w-4" />
           {t("common", "back")}
         </Button>
 

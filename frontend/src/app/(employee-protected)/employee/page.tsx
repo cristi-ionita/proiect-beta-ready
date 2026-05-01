@@ -3,22 +3,12 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import EmployeeDashboardScreen from "@/components/employee/dashboard/employee-dashboard-screen";
-import { useOnboardingGuard } from "@/hooks/use-onboarding-guard";
-
-export default function Page() {
+export default function EmployeePage() {
   const router = useRouter();
-  const { loading, onboardingComplete } = useOnboardingGuard();
 
   useEffect(() => {
-    if (!loading && !onboardingComplete) {
-      router.replace("/employee/onboarding");
-    }
-  }, [loading, onboardingComplete, router]);
+    router.replace("/employee/dashboard");
+  }, [router]);
 
-  if (loading || !onboardingComplete) {
-    return null; // sau loading component
-  }
-
-  return <EmployeeDashboardScreen />;
+  return null;
 }

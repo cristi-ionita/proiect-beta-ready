@@ -4,6 +4,7 @@ export type ApiErrorResponse = {
   error?: string;
   code?: string;
   message?: string;
+  detail?: string;
   details?: Array<{ msg?: string }>;
 };
 
@@ -27,11 +28,12 @@ export function normalizeApiError(error: unknown): ApiClientError {
   const status = error.response?.status;
   const data = error.response?.data;
 
-  if (error.code === "ECONNABORTED") {
+  if (data?.detail && typeof data.detail === "string") {
     return {
-      error: "REQUEST_TIMEOUT",
-      code: "errors.http.timeout",
-      message: "Request timed out.",
+      error: data.error,
+      code: data.code,
+      message: data.detail,
+      details: data.details,
       status,
     };
   }
@@ -46,11 +48,22 @@ export function normalizeApiError(error: unknown): ApiClientError {
     };
   }
 
+  if (error.code === "ECONNABORTED") {
+    return {
+      error: "REQUEST_TIMEOUT",
+      code: "errors.http.timeout",
+      message: "Request timed out.",
+      status,
+    };
+  }
+
   if (Array.isArray(data?.details) && data.details.length > 0) {
     return {
       error: data.error,
       code: data.code,
-      message: data.details.map((item) => item?.msg || "Invalid value").join(", "),
+      message: data.details
+        .map((item) => item?.msg || "Invalid value")
+        .join(", "),
       details: data.details,
       status,
     };

@@ -2,21 +2,14 @@
 
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CalendarDays, CarFront, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
-import ListChip from "@/components/patterns/list-chip";
-import ListRow from "@/components/patterns/list-row";
 import Button from "@/components/ui/button";
 import SectionCard from "@/components/ui/section-card";
 import StatusBadge from "@/components/ui/status-badge";
 import { useAdminIssues } from "@/hooks/admin/use-admin-issues";
 import { useSafeI18n } from "@/hooks/use-safe-i18n";
-import {
-  getIssueStatusLabel,
-  getIssueStatusVariant,
-} from "@/lib/status/issue-status";
-import { formatDate } from "@/lib/utils";
 import type { IssueItem } from "@/types/issue.types";
 
 const priorityOrder: Record<string, number> = {
@@ -56,10 +49,31 @@ function getPriorityVariant(priority?: string) {
   }
 }
 
+function formatIssueDate(value?: string | null) {
+  if (!value) return { date: "—", time: "—" };
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return { date: value, time: "—" };
+  }
+
+  return {
+    date: new Intl.DateTimeFormat("ro-RO", {
+      day: "2-digit",
+      month: "short",
+    }).format(parsed),
+    time: new Intl.DateTimeFormat("ro-RO", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(parsed),
+  };
+}
+
 export default function AdminIssuesScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t, localeTag } = useSafeI18n();
+  const { t } = useSafeI18n();
 
   const showBackButton = searchParams.get("from") === "dashboard";
   const { issues, loading, error } = useAdminIssues();
@@ -67,6 +81,7 @@ export default function AdminIssuesScreen() {
   const sortedIssues = useMemo(() => {
     return [...issues]
       .filter((issue) => issue.status === "open")
+      .filter((issue) => !issue.assigned_mechanic_id)
       .sort((a, b) => {
         const aPriority = priorityOrder[a.priority || "low"] ?? 99;
         const bPriority = priorityOrder[b.priority || "low"] ?? 99;
@@ -79,7 +94,6 @@ export default function AdminIssuesScreen() {
     <div className="space-y-6">
       {showBackButton ? (
         <Button variant="back" onClick={() => router.push("/admin/dashboard")}>
-          <ArrowLeft className="h-4 w-4" />
           {t("common", "back")}
         </Button>
       ) : null}
@@ -93,37 +107,45 @@ export default function AdminIssuesScreen() {
           emptyTitle={t("issues", "noOpenIssues")}
         >
           <div className="space-y-2.5">
-            {sortedIssues.map((issue: IssueItem) => (
-              <ListRow
-                key={issue.id}
-                leading={<TriangleAlert className="h-4 w-4" />}
-                title={issue.vehicle_license_plate || "—"}
-                badge={
-                  <StatusBadge
-                    label={getIssueStatusLabel(issue.status)}
-                    variant={getIssueStatusVariant(issue.status)}
-                  />
-                }
-                meta={
-                  <>
-                    <ListChip icon={<CarFront className="h-3 w-3" />} variant="blue">
-                      {issue.vehicle_license_plate || "—"}
-                    </ListChip>
+            {sortedIssues.map((issue: IssueItem) => {
+              const createdAt = formatIssueDate(issue.created_at);
+              const shiftNumber = issue.reported_by_shift_number ?? "—";
 
-                    <ListChip icon={<CalendarDays className="h-3 w-3" />}>
-                      {formatDate(issue.created_at, localeTag)}
-                    </ListChip>
+              return (
+                <button
+                  key={issue.id}
+                  type="button"
+                  onClick={() => router.push(`/admin/issues/${issue.id}`)}
+                  className="flex w-full items-center gap-4 rounded-[24px] border border-white/10 bg-white/10 p-4 text-left transition hover:bg-white/15"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black text-white">
+                    <TriangleAlert className="h-4 w-4" />
+                  </div>
+
+                  <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center gap-5 text-sm font-semibold">
+                      <span className="text-white">
+                        {issue.vehicle_license_plate || "—"}
+                      </span>
+
+                      <span className="text-slate-200">
+                        Tura {shiftNumber}
+                      </span>
+
+                      <span className="text-slate-300">{createdAt.date}</span>
+
+                      <span className="text-slate-300">{createdAt.time}</span>
+                    </div>
 
                     <StatusBadge
                       label={getPriorityLabel(issue.priority)}
                       variant={getPriorityVariant(issue.priority)}
                       size="sm"
                     />
-                  </>
-                }
-                onClick={() => router.push(`/admin/issues/${issue.id}`)}
-              />
-            ))}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </DataStateBoundary>
       </SectionCard>

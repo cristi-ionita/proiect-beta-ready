@@ -26,14 +26,6 @@ export const metadata: Metadata = {
   description:
     "Modern fleet, employees, maintenance and operations management system.",
   applicationName: "Cars Management",
-  keywords: [
-    "fleet management",
-    "cars management",
-    "employee management",
-    "vehicle tracking",
-    "maintenance",
-    "dashboard",
-  ],
 };
 
 export const viewport: Viewport = {
@@ -50,10 +42,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html
       lang="de"
-      className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full bg-slate-950 scroll-smooth antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-transparent font-sans text-slate-50">
+      <body className="min-h-dvh bg-slate-950 font-sans text-slate-50">
         <I18nProvider>{children}</I18nProvider>
       </body>
     </html>

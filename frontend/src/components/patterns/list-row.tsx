@@ -28,37 +28,52 @@ export default function ListRow({
     <Card
       interactive={Boolean(onClick)}
       onClick={onClick}
-      className={cn("p-3", className)}
+      className={cn("p-4", className)}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          {leading ? (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black text-white">
-              {leading}
-            </div>
-          ) : null}
+      <div className="grid min-w-0 grid-cols-[auto_1fr] gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+        {leading ? (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/60 text-white">
+            {leading}
+          </div>
+        ) : null}
 
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-col gap-1">
-              {badge ? <div className="shrink-0">{badge}</div> : null}
-
-              <p className="truncate text-sm font-semibold text-white">
+        <div
+          className={cn(
+            "min-w-0",
+            !leading && "col-span-2 sm:col-span-1"
+          )}
+        >
+          <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold leading-5 text-white sm:text-base">
                 {title}
-              </p>
+              </div>
 
               {subtitle ? (
-                <p className="truncate text-xs text-slate-400">{subtitle}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-slate-400 sm:truncate sm:text-sm">
+                  {subtitle}
+                </p>
               ) : null}
             </div>
 
-            {meta ? (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">{meta}</div>
+            {badge ? (
+              <div className="flex shrink-0 items-center sm:justify-end">
+                {badge}
+              </div>
             ) : null}
           </div>
+
+          {meta ? (
+            <div className="mt-3 flex min-w-0 flex-wrap gap-2 text-xs text-slate-300">
+              {meta}
+            </div>
+          ) : null}
         </div>
 
         {actions ? (
-          <div className="flex shrink-0 justify-end sm:ml-3">{actions}</div>
+          <div className="col-span-2 flex min-w-0 justify-end gap-2 border-t border-white/10 pt-3 sm:col-span-1 sm:border-t-0 sm:pt-0">
+            {actions}
+          </div>
         ) : null}
       </div>
     </Card>

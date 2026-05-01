@@ -38,7 +38,7 @@ async def dashboard_summary(
     today = date.today()
 
     users_total = await _count(db, User.id)
-    users_active = await _count(db, User.id, User.is_active.is_(True))
+    users_active = await _count(db,User.id,User.is_active.is_(True),User.role == "employee",)
     users_inactive = await _count(db, User.id, User.is_active.is_(False))
     users_pending = await _count(db, User.id, User.status == UserStatus.PENDING.value)
     users_approved = await _count(db, User.id, User.status == UserStatus.APPROVED.value)

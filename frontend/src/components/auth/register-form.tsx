@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { ArrowLeft, CheckCircle, UserPlus, Wrench } from "lucide-react";
+import { CheckCircle, MailCheck, UserPlus, Wrench } from "lucide-react";
 
 import PasswordField from "@/components/auth/PasswordField";
 import Alert from "@/components/ui/alert";
@@ -12,7 +12,7 @@ import Input from "@/components/ui/input";
 import { isApiClientError } from "@/lib/api-error";
 import { authMessages } from "@/lib/i18n/auth-messages";
 import { useI18n } from "@/lib/i18n/use-i18n";
-import { register } from "@/services/auth.api";
+import { register, resendVerificationEmail } from "@/services/auth.api";
 
 type RegisterRole = "employee" | "mechanic";
 
@@ -40,6 +40,7 @@ export default function RegisterForm({ role }: RegisterFormProps) {
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [lastSubmittedEmail, setLastSubmittedEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -47,8 +48,46 @@ export default function RegisterForm({ role }: RegisterFormProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState("");
+  const [resendMessage, setResendMessage] = useState("");
+  const [showResend, setShowResend] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  function resetResendState() {
+    setShowResend(false);
+    setResendMessage("");
+  }
+
+  async function handleResendVerificationEmail() {
+    const targetEmail = (lastSubmittedEmail || email).trim().toLowerCase();
+
+    if (!targetEmail) {
+      setError("Introdu emailul pentru retrimiterea confirmării.");
+      return;
+    }
+
+    try {
+      setResendLoading(true);
+      setError("");
+      setResendMessage("");
+
+      const response = await resendVerificationEmail(targetEmail);
+
+      setResendMessage(
+        response.message || "Emailul de confirmare a fost retrimis."
+      );
+    } catch (err: unknown) {
+      setResendMessage("");
+      setError(
+        isApiClientError(err)
+          ? err.message
+          : "Nu s-a putut retrimite emailul de confirmare."
+      );
+    } finally {
+      setResendLoading(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,6 +98,8 @@ export default function RegisterForm({ role }: RegisterFormProps) {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPassword = password.trim();
     const normalizedConfirmPassword = confirmPassword.trim();
+
+    resetResendState();
 
     if (
       !normalizedFirstName ||
@@ -95,6 +136,7 @@ export default function RegisterForm({ role }: RegisterFormProps) {
     try {
       setLoading(true);
       setError("");
+      setLastSubmittedEmail(normalizedEmail);
 
       await register({
         full_name: `${normalizedFirstName} ${normalizedLastName}`,
@@ -112,7 +154,25 @@ export default function RegisterForm({ role }: RegisterFormProps) {
       setPassword("");
       setConfirmPassword("");
     } catch (err: unknown) {
-      setError(isApiClientError(err) ? err.message : text.createError);
+      const message = isApiClientError(err) ? err.message : text.createError;
+
+      setError(message);
+
+      const lowerMessage = message.toLowerCase();
+
+      if (
+        lowerMessage.includes("există deja o cerere") ||
+        lowerMessage.includes("exista deja o cerere") ||
+        lowerMessage.includes("acest email") ||
+        lowerMessage.includes("emailul nu este confirmat") ||
+        lowerMessage.includes("retrimite") ||
+        lowerMessage.includes("verification") ||
+        lowerMessage.includes("not confirmed") ||
+        lowerMessage.includes("not verified") ||
+        lowerMessage.includes("registration request")
+      ) {
+        setShowResend(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -128,7 +188,10 @@ export default function RegisterForm({ role }: RegisterFormProps) {
           <FormField label={text.firstName} required>
             <Input
               value={firstName}
-              onChange={(event) => setFirstName(event.target.value)}
+              onChange={(event) => {
+                setFirstName(event.target.value);
+                if (error) setError("");
+              }}
               autoComplete="given-name"
               placeholder={text.firstName}
             />
@@ -137,7 +200,10 @@ export default function RegisterForm({ role }: RegisterFormProps) {
           <FormField label={text.lastName} required>
             <Input
               value={lastName}
-              onChange={(event) => setLastName(event.target.value)}
+              onChange={(event) => {
+                setLastName(event.target.value);
+                if (error) setError("");
+              }}
               autoComplete="family-name"
               placeholder={text.lastName}
             />
@@ -148,7 +214,10 @@ export default function RegisterForm({ role }: RegisterFormProps) {
               <Input
                 type="text"
                 value={username}
-                onChange={(event) => setUsername(event.target.value)}
+                onChange={(event) => {
+                  setUsername(event.target.value);
+                  if (error) setError("");
+                }}
                 autoComplete="username"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -163,7 +232,11 @@ export default function RegisterForm({ role }: RegisterFormProps) {
               <Input
                 type="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (error) setError("");
+                  resetResendState();
+                }}
                 autoComplete="email"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -203,10 +276,31 @@ export default function RegisterForm({ role }: RegisterFormProps) {
 
       {error ? <Alert className="mt-4" variant="error" message={error} /> : null}
 
+      {showResend && !success ? (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full"
+            loading={resendLoading}
+            disabled={resendLoading}
+            onClick={handleResendVerificationEmail}
+          >
+            <MailCheck className="h-4 w-4 shrink-0" />
+            Retrimite email confirmare
+          </Button>
+
+          {resendMessage ? (
+            <p className="mt-2 text-center text-xs font-medium text-emerald-200">
+              {resendMessage}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/">
           <Button type="button" variant="secondary">
-            <ArrowLeft className="h-4 w-4" />
             {text.backToLogin}
           </Button>
         </Link>
@@ -214,9 +308,9 @@ export default function RegisterForm({ role }: RegisterFormProps) {
         {!success ? (
           <Button type="submit" loading={loading} disabled={loading}>
             {role === "mechanic" ? (
-              <Wrench className="h-4 w-4" />
+              <Wrench className="h-4 w-4 shrink-0" />
             ) : (
-              <UserPlus className="h-4 w-4" />
+              <UserPlus className="h-4 w-4 shrink-0" />
             )}
             {loading ? text.creating : submitLabel}
           </Button>

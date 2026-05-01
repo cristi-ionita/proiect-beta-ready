@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CarFront } from "lucide-react";
+import { CarFront } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
 import ListRow from "@/components/patterns/list-row";
@@ -36,7 +36,6 @@ export default function AdminUnassignedVehiclesScreen() {
   return (
     <div className="space-y-6">
       <Button variant="back" onClick={() => router.push("/admin/dashboard")}>
-        <ArrowLeft className="h-4 w-4" />
         {t("common", "back")}
       </Button>
 

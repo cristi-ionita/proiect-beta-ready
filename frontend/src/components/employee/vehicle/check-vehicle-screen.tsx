@@ -1,18 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowLeft,
-  CarFront,
-  CheckCircle2,
-  FileImage,
-  Upload,
-  XCircle,
-} from "lucide-react";
+import { CarFront, CheckCircle2, FileImage, XCircle } from "lucide-react";
 
 import DataStateBoundary from "@/components/patterns/data-state-boundary";
-import ListRow from "@/components/patterns/list-row";
 import Alert from "@/components/ui/alert";
 import AppModal from "@/components/ui/app-modal";
 import Button from "@/components/ui/button";
@@ -22,8 +14,6 @@ import { useMyVehicle } from "@/hooks/vehicles/use-my-vehicle";
 import {
   confirmMyVehicle,
   getMyVehiclePhotoFile,
-  rejectMyVehicle,
-  replaceMyVehiclePhoto,
 } from "@/services/vehicles.api";
 
 type VehiclePhoto = {
@@ -42,20 +32,11 @@ export default function CheckVehicleScreen() {
 
   const { data, loading, error, refetch } = useMyVehicle();
 
-  const fileInputsRef = useRef<Record<number, HTMLInputElement | null>>({});
-
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState("");
-  const [actionLoading, setActionLoading] = useState<
-    "confirm" | "reject" | null
-  >(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState("");
-  const [actionDone, setActionDone] = useState<
-    "confirmed" | "rejected" | null
-  >(null);
-  const [needsReplace, setNeedsReplace] = useState<Record<number, boolean>>({});
-  const [uploadingPhotoId, setUploadingPhotoId] = useState<number | null>(null);
-  const [photoError, setPhotoError] = useState("");
+  const [actionDone, setActionDone] = useState(false);
 
   const assignmentStatus = data?.assignment?.status;
   const isPending = assignmentStatus === "pending";
@@ -65,10 +46,11 @@ export default function CheckVehicleScreen() {
     (photo) => photo.type === "registration"
   );
 
-  const photosByType = {
-    exterior: data?.photos?.filter((photo) => photo.type === "exterior") || [],
-    damage: data?.photos?.filter((photo) => photo.type === "damage") || [],
-  };
+  const exteriorPhotos =
+    data?.photos?.filter((photo) => photo.type === "exterior") || [];
+
+  const damagePhotos =
+    data?.photos?.filter((photo) => photo.type === "damage") || [];
 
   async function handlePreview(photoId: number, fileName: string) {
     const blob = await getMyVehiclePhotoFile(photoId);
@@ -91,64 +73,24 @@ export default function CheckVehicleScreen() {
     setPreviewName("");
   }
 
-  async function handleReplacePhoto(photoId: number, file: File | null) {
-    if (!file) return;
-
-    try {
-      setPhotoError("");
-      setUploadingPhotoId(photoId);
-
-      await replaceMyVehiclePhoto(photoId, file);
-      await refetch();
-
-      setNeedsReplace((current) => ({
-        ...current,
-        [photoId]: false,
-      }));
-    } catch {
-      setPhotoError("Nu s-a putut actualiza poza. Încearcă din nou.");
-    } finally {
-      setUploadingPhotoId(null);
-
-      const input = fileInputsRef.current[photoId];
-      if (input) input.value = "";
-    }
-  }
-
   async function handleConfirm() {
     try {
-      setActionLoading("confirm");
+      setActionLoading(true);
       setActionError("");
 
       await confirmMyVehicle();
-      setActionDone("confirmed");
+      setActionDone(true);
       await refetch();
     } catch {
       setActionError("Nu s-a putut confirma vehiculul.");
     } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function handleReject() {
-    try {
-      setActionLoading("reject");
-      setActionError("");
-
-      await rejectMyVehicle();
-      setActionDone("rejected");
-      await refetch();
-    } catch {
-      setActionError("Nu s-a putut refuza vehiculul.");
-    } finally {
-      setActionLoading(null);
+      setActionLoading(false);
     }
   }
 
   return (
     <div className="space-y-4">
       <Button type="button" variant="back" onClick={() => router.push(backHref)}>
-        <ArrowLeft className="h-4 w-4" />
         Înapoi
       </Button>
 
@@ -157,7 +99,7 @@ export default function CheckVehicleScreen() {
         isError={Boolean(error)}
         errorMessage={error}
       >
-        {actionDone === "confirmed" || isActive ? (
+        {actionDone || isActive ? (
           <SectionCard
             title="Vehicul preluat"
             icon={<CheckCircle2 className="h-5 w-5" />}
@@ -167,16 +109,6 @@ export default function CheckVehicleScreen() {
               message={`Vehiculul ${
                 data?.vehicle?.license_plate ?? ""
               } a fost preluat cu succes. Alocarea este activă.`}
-            />
-          </SectionCard>
-        ) : actionDone === "rejected" ? (
-          <SectionCard
-            title="Vehicul refuzat"
-            icon={<XCircle className="h-5 w-5" />}
-          >
-            <Alert
-              variant="warning"
-              message="Ai refuzat vehiculul. Adminul va face o nouă alocare."
             />
           </SectionCard>
         ) : !data?.vehicle || !data.assignment ? (
@@ -189,117 +121,75 @@ export default function CheckVehicleScreen() {
             </p>
           </SectionCard>
         ) : isPending ? (
-          <div className="space-y-4">
-            <SectionCard
-              title="Detalii vehicul"
-              icon={<CarFront className="h-5 w-5" />}
-            >
-              <div className="space-y-3">
-                <ListRow
-                  leading={<CarFront className="h-4 w-4" />}
-                  title={`${data.vehicle.brand} ${data.vehicle.model}`}
-                  subtitle={data.vehicle.license_plate}
-                  actions={
-                    registrationPhoto ? (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          void handlePreview(
-                            registrationPhoto.id,
-                            registrationPhoto.file_name
-                          )
-                        }
-                      >
-                        Deschide talon
-                      </Button>
-                    ) : null
-                  }
-                />
+          <SectionCard
+            title="Detalii vehicul"
+            icon={<CarFront className="h-5 w-5" />}
+          >
+            <div className="space-y-5">
+              {actionError ? <Alert variant="error" message={actionError} /> : null}
 
-                {!registrationPhoto ? (
-                  <p className="text-sm text-slate-400">
-                    Adminul nu a adăugat încă poza talonului.
-                  </p>
-                ) : null}
-              </div>
-            </SectionCard>
+              <div className="rounded-3xl border border-white/10 bg-white/10 p-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-black/60 text-white">
+                    <CarFront className="h-5 w-5" />
+                  </div>
 
-            <SectionCard
-              title="Poze vehicul adăugate de admin"
-              icon={<FileImage className="h-5 w-5" />}
-            >
-              {photoError ? <Alert variant="error" message={photoError} /> : null}
-
-              <div className="space-y-4">
-                <PhotoGroup
-                  title="Poze exterior"
-                  photos={photosByType.exterior}
-                  needsReplace={needsReplace}
-                  uploadingPhotoId={uploadingPhotoId}
-                  fileInputsRef={fileInputsRef}
-                  onPreview={handlePreview}
-                  onNeedReplace={(photoId) =>
-                    setNeedsReplace((current) => ({
-                      ...current,
-                      [photoId]: true,
-                    }))
-                  }
-                  onReplace={handleReplacePhoto}
-                />
-
-                <PhotoGroup
-                  title="Poze daune"
-                  photos={photosByType.damage}
-                  needsReplace={needsReplace}
-                  uploadingPhotoId={uploadingPhotoId}
-                  fileInputsRef={fileInputsRef}
-                  onPreview={handlePreview}
-                  onNeedReplace={(photoId) =>
-                    setNeedsReplace((current) => ({
-                      ...current,
-                      [photoId]: true,
-                    }))
-                  }
-                  onReplace={handleReplacePhoto}
-                />
-              </div>
-            </SectionCard>
-
-            <SectionCard
-              title="Confirmare alocare"
-              icon={<CheckCircle2 className="h-5 w-5" />}
-            >
-              <div className="space-y-4">
-                {actionError ? (
-                  <Alert variant="error" message={actionError} />
-                ) : null}
-
-                <div className="flex flex-col gap-3 md:flex-row md:justify-end">
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={Boolean(actionLoading) || Boolean(uploadingPhotoId)}
-                    loading={actionLoading === "reject"}
-                    onClick={() => void handleReject()}
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Nu corespunde
-                  </Button>
-
-                  <Button
-                    type="button"
-                    disabled={Boolean(actionLoading) || Boolean(uploadingPhotoId)}
-                    loading={actionLoading === "confirm"}
-                    onClick={() => void handleConfirm()}
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    Confirm că datele corespund
-                  </Button>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-lg font-bold text-white">
+                      {data.vehicle.brand} {data.vehicle.model}
+                    </h2>
+                    <p className="text-sm font-medium text-slate-400">
+                      {data.vehicle.license_plate}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </SectionCard>
-          </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black/60 text-white">
+                    <FileImage className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-base font-bold text-white">
+                    Poze vehicul adăugate de admin
+                  </h3>
+                </div>
+
+                <div className="space-y-4">
+                  <PhotoGroup
+                    title="Talon"
+                    photos={registrationPhoto ? [registrationPhoto] : []}
+                    onPreview={handlePreview}
+                  />
+
+                  <PhotoGroup
+                    title="Poze exterior"
+                    photos={exteriorPhotos}
+                    onPreview={handlePreview}
+                  />
+
+                  <PhotoGroup
+                    title="Poze daune"
+                    photos={damagePhotos}
+                    onPreview={handlePreview}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="button"
+                  disabled={actionLoading}
+                  loading={actionLoading}
+                  onClick={() => void handleConfirm()}
+                  className="w-full sm:w-auto"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Confirmă vehicul
+                </Button>
+              </div>
+            </div>
+          </SectionCard>
         ) : (
           <SectionCard
             title="Status alocare"
@@ -328,114 +218,38 @@ export default function CheckVehicleScreen() {
 function PhotoGroup({
   title,
   photos,
-  needsReplace,
-  uploadingPhotoId,
-  fileInputsRef,
   onPreview,
-  onNeedReplace,
-  onReplace,
 }: {
   title: string;
   photos: VehiclePhoto[];
-  needsReplace: Record<number, boolean>;
-  uploadingPhotoId: number | null;
-  fileInputsRef: React.MutableRefObject<Record<number, HTMLInputElement | null>>;
   onPreview: (id: number, name: string) => Promise<void>;
-  onNeedReplace: (id: number) => void;
-  onReplace: (id: number, file: File | null) => Promise<void>;
 }) {
   return (
-    <SectionCard title={title}>
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+      <h4 className="mb-3 text-sm font-bold text-white">{title}</h4>
+
       {photos.length === 0 ? (
         <p className="text-sm text-slate-400">Nu există fișiere.</p>
       ) : (
         <div className="space-y-2.5">
           {photos.map((photo) => (
-            <PhotoReviewRow
+            <button
               key={photo.id}
-              photo={photo}
-              needsReplace={Boolean(needsReplace[photo.id])}
-              uploading={uploadingPhotoId === photo.id}
-              inputRef={(element) => {
-                fileInputsRef.current[photo.id] = element;
-              }}
-              onPreview={onPreview}
-              onNeedReplace={onNeedReplace}
-              onChooseFile={() => fileInputsRef.current[photo.id]?.click()}
-              onReplace={onReplace}
-            />
+              type="button"
+              onClick={() => void onPreview(photo.id, photo.file_name)}
+              className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3 text-left transition hover:bg-white/15"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/50 text-white">
+                <FileImage className="h-4 w-4" />
+              </div>
+
+              <span className="min-w-0 truncate text-sm font-semibold text-white">
+                {photo.file_name}
+              </span>
+            </button>
           ))}
         </div>
       )}
-    </SectionCard>
-  );
-}
-
-function PhotoReviewRow({
-  photo,
-  needsReplace,
-  uploading,
-  inputRef,
-  onPreview,
-  onNeedReplace,
-  onChooseFile,
-  onReplace,
-}: {
-  photo: VehiclePhoto;
-  needsReplace: boolean;
-  uploading: boolean;
-  inputRef: (element: HTMLInputElement | null) => void;
-  onPreview: (id: number, name: string) => Promise<void>;
-  onNeedReplace: (id: number) => void;
-  onChooseFile: () => void;
-  onReplace: (id: number, file: File | null) => Promise<void>;
-}) {
-  return (
-    <ListRow
-      leading={<FileImage className="h-4 w-4" />}
-      title={photo.file_name}
-      actions={
-        <div className="flex flex-wrap justify-end gap-2">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(event) =>
-              void onReplace(photo.id, event.target.files?.[0] || null)
-            }
-          />
-
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => void onPreview(photo.id, photo.file_name)}
-          >
-            Vezi poza
-          </Button>
-
-          {!needsReplace ? (
-            <Button
-              size="sm"
-              variant="danger"
-              disabled={uploading}
-              onClick={() => onNeedReplace(photo.id)}
-            >
-              Nu corespunde
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              disabled={uploading}
-              loading={uploading}
-              onClick={onChooseFile}
-            >
-              <Upload className="h-4 w-4" />
-              Încarcă noua poză
-            </Button>
-          )}
-        </div>
-      }
-    />
+    </div>
   );
 }

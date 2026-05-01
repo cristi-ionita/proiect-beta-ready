@@ -78,16 +78,17 @@ export default function AdminDashboardScreen() {
   const { t } = useSafeI18n();
   const { data, loading, error } = useAdminDashboard();
 
-  const safeCounts = useMemo(
-    () => ({
+  const safeCounts = useMemo(() => {
+    const activeIssues = data?.issuesSummary?.open ?? 0;
+
+    return {
       todayLeaves: data?.todayLeaves ?? 0,
-      issues: data?.issues?.length ?? 0,
+      issues: activeIssues,
       activeUsers: data?.workingTodayUsers ?? 0,
       pendingUsers: data?.pendingUsers ?? 0,
       availableVehicles: data?.availableVehicles ?? 0,
-    }),
-    [data]
-  );
+    };
+  }, [data]);
 
   return (
     <DataStateBoundary

@@ -56,6 +56,8 @@ function redirectToLogin(): void {
   window.location.replace("/?sessionExpired=1");
 }
 
+// ---------------- REQUEST INTERCEPTOR ----------------
+
 api.interceptors.request.use((config) => {
   const adminToken = getAdminToken();
   const appToken = getAppToken();
@@ -79,12 +81,23 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// ---------------- RESPONSE INTERCEPTOR ----------------
+
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
     const normalizedError = normalizeApiError(error);
 
-    if (normalizedError.status === 401) {
+    const requestUrl = axios.isAxiosError(error)
+      ? error.config?.url
+      : undefined;
+
+    const isAuthRequest =
+      typeof requestUrl === "string" &&
+      requestUrl.startsWith("/auth/");
+
+    // IMPORTANT: nu redirectăm la login pentru requesturi de auth (ex: login)
+    if (normalizedError.status === 401 && !isAuthRequest) {
       redirectToLogin();
     }
 
